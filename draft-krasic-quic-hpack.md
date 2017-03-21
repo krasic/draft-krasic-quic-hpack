@@ -153,16 +153,16 @@ QPACK adds three integer *epochs* to HPACK state, all derived from the sequence
 numbers of HTTP Mapping (refer to {{QUIC-HTTP}} Sections 5.2.2 and 5.2.4.), and
 provided to the HPACK layer by the HTTP mapping:
 
-1. *encode epoch*: the sequence number of the frame enclosing the header block,
+1. `encode_epoch`: the sequence number of the frame enclosing the header block,
    as per the HTTP Mapping.  When entries are added to they dynamic table, the
    current encode epoch is stored with the entry.
-2. *packet epoch*: the first encode epoch in the current QUIC packet.  When
+2. `packet_epoch`: the first encode epoch in the current QUIC packet.  When
    multiple header blocks are packed into a single QUIC packet, the header
    blocks should be ordered.
-3. *commit epoch*: the highest in-order encode epoch acknowledged to the
+3. `commit_epoch`: the highest in-order encode epoch acknowledged to the
    encoder side.
 
-The following must hold: `encode epoch >= packet epoch > commit epoch`.
+The following must hold: `encode_epoch >= packet_epoch > commit_epoch`.
 The next section provides more detail of how the values are computed.
 
 ### Indexed representations
@@ -192,13 +192,13 @@ encoding epochs to the HPACK layer:
 * then encoding epoch increments for every new header encoded.
 
 * the mapping layer keeps track of header blocks by their encode epochs, and
-  monitors transport acknolwedgments to determine when the commit epoch can
+  monitors transport acknolwedgments to determine when `commit_epoch` can
   advance, that is when the highest in-order acknowledged encode epoch has
   increased.  *This piggybacks on existing QUIC transport mechanisms, no
   additional wire format changes are needed.*
 
 * the mapping layer coordinates with packet writing to manange space available
-  for header blocks, and increments the packet epoch at packet boundaries.
+  for header blocks, and advances the packet epoch at packet boundaries.
   *Although sub-optimal, an simpler implementation could ignore packet
   boundaries and hold that `packet epoch == encode epoch`.*
 

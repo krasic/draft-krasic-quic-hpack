@@ -414,11 +414,11 @@ address {
 <p/>
 
 <ol>
-  <li><em>encode epoch</em>: the sequence number of the frame enclosing the header block, as per the HTTP Mapping.  When entries are added to they dynamic table, the current encode epoch is stored with the entry.</li>
-  <li><em>packet epoch</em>: the first encode epoch in the current QUIC packet.  When multiple header blocks are packed into a single QUIC packet, the header blocks should be ordered.</li>
-  <li><em>commit epoch</em>: the highest in-order encode epoch acknowledged to the encoder side.</li>
+  <li><samp>encode_epoch</samp>: the sequence number of the frame enclosing the header block, as per the HTTP Mapping.  When entries are added to they dynamic table, the current encode epoch is stored with the entry.</li>
+  <li><samp>packet_epoch</samp>: the first encode epoch in the current QUIC packet.  When multiple header blocks are packed into a single QUIC packet, the header blocks should be ordered.</li>
+  <li><samp>commit_epoch</samp>: the highest in-order encode epoch acknowledged to the encoder side.</li>
 </ol>
-<p id="rfc.section.3.1.p.3">The following must hold: <samp>encode epoch &gt;= packet epoch &gt; commit epoch</samp>.  The next section provides more detail of how the values are computed.</p>
+<p id="rfc.section.3.1.p.3">The following must hold: <samp>encode_epoch &gt;= packet_epoch &gt; commit_epoch</samp>.  The next section provides more detail of how the values are computed.</p>
 <h3 id="rfc.section.3.1.1"><a href="#rfc.section.3.1.1">3.1.1.</a> <a href="#indexed-representations" id="indexed-representations">Indexed representations</a></h3>
 <p id="rfc.section.3.1.1.p.1">As each header block is processed, HPACK is informed whether QPACK is enabled.  If so, the encoder will emit an indexed representation only if there is a matching entry in the dyamic table such that: <samp>entry.encode_epoch &lt;= commit_epoch or entry.encode_epoch &gt;= packet_epoch</samp>.  Otherwise a literal must be used.</p>
 <h3 id="rfc.section.3.1.2"><a href="#rfc.section.3.1.2">3.1.2.</a> <a href="#indexing" id="indexing">Indexing</a></h3>
@@ -430,8 +430,8 @@ address {
 
 <ul>
   <li>then encoding epoch increments for every new header encoded.</li>
-  <li>the mapping layer keeps track of header blocks by their encode epochs, and monitors transport acknolwedgments to determine when the commit epoch can advance, that is when the highest in-order acknowledged encode epoch has increased.  <em>This piggybacks on existing QUIC transport mechanisms, no additional wire format changes are needed.</em></li>
-  <li>the mapping layer coordinates with packet writing to manange space available for header blocks, and increments the packet epoch at packet boundaries.  <em>Although sub-optimal, an simpler implementation could ignore packet boundaries and hold that .</em><samp>packet epoch == encode epoch</samp></li>
+  <li>the mapping layer keeps track of header blocks by their encode epochs, and monitors transport acknolwedgments to determine when <samp>commit_epoch</samp> can advance, that is when the highest in-order acknowledged encode epoch has increased.  <em>This piggybacks on existing QUIC transport mechanisms, no additional wire format changes are needed.</em></li>
+  <li>the mapping layer coordinates with packet writing to manange space available for header blocks, and advances the packet epoch at packet boundaries.  <em>Although sub-optimal, an simpler implementation could ignore packet boundaries and hold that .</em><samp>packet epoch == encode epoch</samp></li>
 </ul>
 <h3 id="rfc.section.3.2.1"><a href="#rfc.section.3.2.1">3.2.1.</a> <a href="#table-evictions" id="table-evictions">Table evictions</a></h3>
 <p id="rfc.section.3.2.1.p.1">Since QPACK allows headers to be processed out of order, it might be possible that an header block may contain references to entries that have already been evicted by the time it arrives.  For example, suppose HB was encoded after HA, and HB evicts an entry reference by HA.   If due to network drops HB is decoded first, the reference in HA will become invalid.</p>

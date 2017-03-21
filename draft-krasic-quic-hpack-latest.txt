@@ -15,16 +15,16 @@ Abstract
 
    The design of the core QUIC transport and the mapping of HTTP
    semantics over it subsume many HTTP/2 features, prominent among them
-   stream multiplexing and HTTP header compression HTTP2 FAQ [1].  A key
-   advantage of the QUIC transport is that provides stream multplexing
-   free of HoL blocking between streams, while in HTTP/2 multiplexed
-   streams can suffer HoL blocking primarily due to HTTP/2's layering
-   above TCP.  However, assuming HPACK is used for header compression,
-   HTTP over QUIC is still vulnerable to HoL blocking, because of how
-   HPACK exploits header redundancies between multiplexed HTTP
-   transactions.  This draft defines QPACK, a variation of HPACK and
-   mechanisms in QUIC's HTTP mapping that allow QUIC implementations the
-   flexibility to avoid header-compression induced HoL blocking.
+   stream multiplexing and HTTP header compression.  A key advantage of
+   the QUIC transport is that provides stream multplexing free of HoL
+   blocking between streams, while in HTTP/2 multiplexed streams can
+   suffer HoL blocking primarily due to HTTP/2's layering above TCP.
+   However, assuming HPACK is used for header compression, HTTP over
+   QUIC is still vulnerable to HoL blocking, because of how HPACK
+   exploits header redundancies between multiplexed HTTP transactions.
+   This draft defines QPACK, a variation of HPACK and mechanisms in
+   QUIC's HTTP mapping that allow QUIC implementations the flexibility
+   to avoid header-compression induced HoL blocking.
 
 Status of This Memo
 
@@ -83,9 +83,7 @@ Table of Contents
    5.  Security Considerations . . . . . . . . . . . . . . . . . . .   6
    6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
    7.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .   7
-   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   7
-     8.1.  Normative References  . . . . . . . . . . . . . . . . . .   7
-     8.2.  URIs  . . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   8.  Normative References  . . . . . . . . . . . . . . . . . . . .   7
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   7
 
 1.  Introduction
@@ -105,6 +103,8 @@ Table of Contents
    shrinking the representation of headers that have appeared earlier on
    the same connection.  In the context of QUIC, this imposes a
    vulnerability to HoL blocking as will be described more below.
+
+
 
 
 
@@ -350,9 +350,7 @@ Internet-Draft                    HPACK                       March 2017
 
    o  Biren Roy
 
-8.  References
-
-8.1.  Normative References
+8.  Normative References
 
    [QUIC-HTTP]
               Bishop, M., Ed., "Hypertext Transfer Protocol (HTTP) over
@@ -371,16 +369,18 @@ Internet-Draft                    HPACK                       March 2017
               HTTP/2", RFC 7541, DOI 10.17487/RFC7541, May 2015,
               <http://www.rfc-editor.org/info/rfc7541>.
 
-8.2.  URIs
-
-   [1] https://http2.github.io/faq/#why-do-we-need-header-compression
-
 Author's Address
 
    Charles 'Buck' Krasic (editor)
    Google
 
    Email: ckrasic@google.com
+
+
+
+
+
+
 
 
 

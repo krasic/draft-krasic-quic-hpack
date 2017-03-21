@@ -50,17 +50,15 @@ normative:
 
 The design of the core QUIC transport and the mapping of HTTP semantics over it
 subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP
-header
-compression
-[HTTP2 FAQ](https://http2.github.io/faq/#why-do-we-need-header-compression).
-A key advantage of the QUIC transport is that provides stream multplexing free
-of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer
-HoL blocking primarily due to HTTP/2's layering above TCP.  However, assuming
-HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL
-blocking, because of how HPACK exploits header redundancies between multiplexed
-HTTP transactions.  This draft defines QPACK, a variation of HPACK and
-mechanisms in QUIC's HTTP mapping that allow QUIC implementations the
-flexibility to avoid header-compression induced HoL blocking.
+header compression.  A key advantage of the QUIC transport is that provides
+stream multplexing free of HoL blocking between streams, while in HTTP/2
+multiplexed streams can suffer HoL blocking primarily due to HTTP/2's layering
+above TCP.  However, assuming HPACK is used for header compression, HTTP over
+QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header
+redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a
+variation of HPACK and mechanisms in QUIC's HTTP mapping that allow QUIC
+implementations the flexibility to avoid header-compression induced HoL
+blocking.
 
 --- middle
 

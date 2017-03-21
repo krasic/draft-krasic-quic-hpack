@@ -1,1 +1,392 @@
-../quic-wg-base-drafts/draft-krasic-quic-hpack.txt
+
+
+
+
+QUIC                                                      C. Krasic, Ed.
+Internet-Draft                                                    Google
+Intended status: Standards Track                          March 21, 2017
+Expires: September 22, 2017
+
+
+                 Header Compression for HTTP over QUIC
+                       draft-krasic-qpack-latest
+
+Abstract
+
+   The design of the core QUIC transport and the mapping of HTTP
+   semantics over it subsume many HTTP/2 features, prominent among them
+   stream multiplexing and HTTP header compression HTTP2 FAQ [1].  A key
+   advantage of the QUIC transport is that provides stream multplexing
+   free of HoL blocking between streams, while in HTTP/2 multiplexed
+   streams can suffer HoL blocking primarily due to HTTP/2's layering
+   above TCP.  However, assuming HPACK is used for header compression,
+   HTTP over QUIC is still vulnerable to HoL blocking, because of how
+   HPACK exploits header redundancies between multiplexed HTTP
+   transactions.  This draft defines QPACK, a variation of HPACK and
+   mechanisms in QUIC's HTTP mapping that allow QUIC implementations the
+   flexibility to avoid header-compression induced HoL blocking.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on September 22, 2017.
+
+Copyright Notice
+
+   Copyright (c) 2017 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents
+
+
+
+Krasic                 Expires September 22, 2017               [Page 1]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+   (http://trustee.ietf.org/license-info) in effect on the date of
+   publication of this document.  Please review these documents
+   carefully, as they describe your rights and restrictions with respect
+   to this document.  Code Components extracted from this document must
+   include Simplified BSD License text as described in Section 4.e of
+   the Trust Legal Provisions and are provided without warranty as
+   described in the Simplified BSD License.
+
+Table of Contents
+
+   1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
+   2.  QPACK overview  . . . . . . . . . . . . . . . . . . . . . . .   3
+     2.1.  Example of HoL blocking . . . . . . . . . . . . . . . . .   3
+     2.2.  How QPACK avoids HoL blocking . . . . . . . . . . . . . .   3
+       2.2.1.  Absolute Indexing . . . . . . . . . . . . . . . . . .   4
+   3.  Changes to HPACK and HTTP over QUIC . . . . . . . . . . . . .   4
+     3.1.  HPACK changes . . . . . . . . . . . . . . . . . . . . . .   4
+       3.1.1.  Indexed representations . . . . . . . . . . . . . . .   5
+       3.1.2.  Indexing  . . . . . . . . . . . . . . . . . . . . . .   5
+     3.2.  HTTP Mapping changes  . . . . . . . . . . . . . . . . . .   5
+       3.2.1.  Table evictions . . . . . . . . . . . . . . . . . . .   6
+   4.  Performance considerations  . . . . . . . . . . . . . . . . .   6
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   6
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
+   7.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .   7
+   8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   7
+     8.1.  Normative References  . . . . . . . . . . . . . . . . . .   7
+     8.2.  URIs  . . . . . . . . . . . . . . . . . . . . . . . . . .   7
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   7
+
+1.  Introduction
+
+   The QUIC transport protocol was designed from the outset to support
+   HTTP semantics, and its design subsumes most of the features of
+   HTTP/2.  Two of those features, stream multiplexing and header
+   compression come into some conflict in QUIC.  A key goal of QUIC's
+   design is to improve stream multiplexing relative to HTTP/2, by
+   eliminating HoL (head of line) blocking that can occur in HTTP/2.
+   HoL blocking can happen because HTTP/2 streams are multiplexed onto a
+   single TCP connection with its in-order semantics.  QUIC can maintain
+   independence between streams because it implements core transport
+   functionality in a fully stream-aware manner.  However, the HTTP over
+   QUIC mapping is still subject HoL blocking if HPACK is used directly
+   as in HTTP/2.  HPACK exploits multiplexing for greater compression,
+   shrinking the representation of headers that have appeared earlier on
+   the same connection.  In the context of QUIC, this imposes a
+   vulnerability to HoL blocking as will be described more below.
+
+
+
+
+Krasic                 Expires September 22, 2017               [Page 2]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+   QUIC is described in [QUIC-TRANSPORT].  The HTTP over QUIC mapping is
+   decribed in [QUIC-HTTP].  For a full description of HTTP/2, see
+   [RFC7540].  The description of HPACK is [RFC7541].
+
+2.  QPACK overview
+
+   Readers may wish to refer to [RFC7540] Section 1.4 to review HPACK
+   terminology, and [QUIC-HTTP], Sections 4 on "HTTP over QUIC stream
+   mapping" and 4.2.1 on "Header Compression".
+
+   This draft extends HPACK and the HTTP over QUIC mapping with the
+   _option_ to avoid HoL blocking, in a backward compatible fashion.
+   QPACK strives to solve HoL blocking in the simplest way possible.  To
+   that end, the mechanisms QPACK defines are largely at the granularity
+   of header blocks, as opposed to individual header field
+   representations.
+
+2.1.  Example of HoL blocking
+
+   The following is an example of how HPACK can induce HoL blocking in
+   QUIC.  Assume two message control streams "A" and "B", and
+   corresponding header blocks "HA" and "HB".  Stream "B" experiences
+   HoL blocking due to "A" as follows:
+
+   1.  HPACK encodes header field "HB[i]" using an index that refers to
+       a table entry that resulted from header field "HA[j]".
+
+   2.  "HA" and "HB" are delivered via distinct packets that are
+       inflight in the same round trip.
+
+   3.  "HB"'s packet is delivered but "HA"'s is dropped.  HPACK can not
+       decode "HB" until "HA"'s packet is successfully retransmitted.
+
+2.2.  How QPACK avoids HoL blocking
+
+   Continuing the example, QPACK's approach is as follows.
+
+   1.  "HB[i]" can refer to "HA[j]" if "HA[j]" was delivered in a prior
+       round trip.
+
+   2.  "HB[i]" can refer to "HA[j]" if "HA" and "HB" are to be delivered
+       in the same packet.
+
+   3.  If QPACK is enabled, "HB[i]" will be represented using an HPACK
+       literal.  Otherwise an indexed representation may be used, but HB
+       must processed in-order, after HA.
+
+
+
+
+
+Krasic                 Expires September 22, 2017               [Page 3]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+   It is worth noting that rules 1. and 2. are situations where "HB" is
+   not at risk of HoL blocking, even without QPACK.  Only in rule 3 does
+   QPACK come into play giving the encoder the choice between HoL
+   avoidance or better compression.
+
+2.2.1.  Absolute Indexing
+
+   HPACK indexed entries refer to an entry by its current position in
+   the dynamic table.  As Figure 1 of [RFC7541] illustrates, newest
+   entries have smallest indices, and oldest entries are evicted first
+   if the table is full.  Under this scheme, each insertion to the table
+   causes the index of all existing entries to change (implicitly).  The
+   approach is acceptable for HTTP/2 because TCP is totally ordered, but
+   it is is problematic in the out-of-order context of QUIC.
+
+   QPACK uses a hybrid absolute-relative indexing approach.  Every QPACK
+   header block starts with an integer that conveys the base index, the
+   total number of entries that had been inserted to the dynamic table
+   before encoding the current header block.  The format of individual
+   indexed representations does not change, but their semantics become
+   absolute in combination with the base index.  Similarly, the base
+   index is used to perform table insertions at unambiguous positions.
+
+3.  Changes to HPACK and HTTP over QUIC
+
+   QPACK is optional on a per header block basis, and signaled by a new
+   flag in the HEADERS and PUSH_PROMISE frames.  If this flag is absent,
+   then the header block should be processed in strict order as per
+   Section 4.2.1 of the HTTP mapping.
+
+3.1.  HPACK changes
+
+   QPACK adds three integer _epochs_ to HPACK state, all derived from
+   the sequence numbers of HTTP Mapping (refer to [QUIC-HTTP] Sections
+   5.2.2 and 5.2.4.), and provided to the HPACK layer by the HTTP
+   mapping:
+
+   1.  _encode epoch_: the sequence number of the frame enclosing the
+       header block, as per the HTTP Mapping.  When entries are added to
+       they dynamic table, the current encode epoch is stored with the
+       entry.
+
+   2.  _packet epoch_: the first encode epoch in the current QUIC
+       packet.  When multiple header blocks are packed into a single
+       QUIC packet, the header blocks should be ordered.
+
+   3.  _commit epoch_: the highest in-order encode epoch acknowledged to
+       the encoder side.
+
+
+
+Krasic                 Expires September 22, 2017               [Page 4]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+   The following must hold: "encode epoch >= packet epoch > commit
+   epoch".  The next section provides more detail of how the values are
+   computed.
+
+3.1.1.  Indexed representations
+
+   As each header block is processed, HPACK is informed whether QPACK is
+   enabled.  If so, the encoder will emit an indexed representation only
+   if there is a matching entry in the dyamic table such that:
+   "entry.encode_epoch <= commit_epoch or entry.encode_epoch >=
+   packet_epoch".  Otherwise a literal must be used.
+
+3.1.2.  Indexing
+
+   Every QPACK header block must start with a single HPACK integer that
+   encodes the value of the base index.  As described above, the decoder
+   will use this as the starting point for insertions, and for
+   interpreting indexed representations.
+
+3.2.  HTTP Mapping changes
+
+   HoL avoidance is signalled on a per header block basis, a new flag is
+   reserved in HEADER frames that signals whether the block is QPACK
+   encoded.  When received on the decoding side, if the HEADER frame
+   contains the QPACK flag set, then the header block may be processes
+   immediatly instead of in-order.
+
+   When sending headers, the HTTP mapping layer provides the commit,
+   packet, and encoding epochs to the HPACK layer:
+
+   o  then encoding epoch increments for every new header encoded.
+
+   o  the mapping layer keeps track of header blocks by their encode
+      epochs, and monitors transport acknolwedgments to determine when
+      the commit epoch can advance, that is when the highest in-order
+      acknowledged encode epoch has increased.  _This piggybacks on
+      existing QUIC transport mechanisms, no additional wire format
+      changes are needed._
+
+   o  the mapping layer coordinates with packet writing to manange space
+      available for header blocks, and increments the packet epoch at
+      packet boundaries.  _Although sub-optimal, an simpler
+      implementation could ignore packet boundaries and hold that
+      ._"packet epoch == encode epoch"
+
+
+
+
+
+
+
+Krasic                 Expires September 22, 2017               [Page 5]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+3.2.1.  Table evictions
+
+   Since QPACK allows headers to be processed out of order, it might be
+   possible that an header block may contain references to entries that
+   have already been evicted by the time it arrives.  For example,
+   suppose HB was encoded after HA, and HB evicts an entry reference by
+   HA.  If due to network drops HB is decoded first, the reference in HA
+   will become invalid.
+
+   To handle this with minimal complexity, QPACK takes the following
+   approach: if while encoding the current header block, an eviction
+   becomes necessary, then QPACK must be disabled for the current header
+   block.  In the above example, HB could not be QPACK enabled, hence
+   decoding HB must wait for HA to be decoded first.
+
+   *Compared to other QUIC state such as receive buffers, the default
+   table size of 4,096 octets (see [RFC7540] Section 6.5.2.) is very
+   modest.  Deployment data suggests it is rarely increased in practice,
+   and experiments to increase it did not yield significant gains.
+   Consequently, I think it's best to avoid any heroic measures to deal
+   with performance under full tables. *
+
+4.  Performance considerations
+
+   Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4,
+   the only additional overhead of QPACK is the base index added to
+   header blocks.  In the common case, the index should consume 1 byte
+   per header block.
+
+   It might be advantageous to allow implemenations to send header
+   frames on the HTTP control stream (QUIC stream 3).  Such headers
+   would not be associated with any HTTP transaction, but could be used
+   strategically to improve performance.  For instance, as a means to
+   avoid disabling QPACK because of table eviction, or to ensure most
+   frequently used entries have the smallest indices.
+
+5.  Security Considerations
+
+   TBD.
+
+6.  IANA Considerations
+
+   This document currently makes no request of IANA, and might not need
+   to.
+
+
+
+
+
+
+
+Krasic                 Expires September 22, 2017               [Page 6]
+
+Internet-Draft                    HPACK                       March 2017
+
+
+7.  Acknowledgements
+
+   This draft draws heavily on the text of [RFC7541].  The indirect
+   input of those authors is gratefully acknowledged, as well as ideas
+   from:
+
+   o  Mike Bishop
+
+   o  Patrick McManus
+
+   o  Biren Roy
+
+8.  References
+
+8.1.  Normative References
+
+   [QUIC-HTTP]
+              Bishop, M., Ed., "Hypertext Transfer Protocol (HTTP) over
+              QUIC".
+
+   [QUIC-TRANSPORT]
+              Iyengar, J., Ed. and M. Thomson, Ed., "QUIC: A UDP-Based
+              Multiplexed and Secure Transport".
+
+   [RFC7540]  Belshe, M., Peon, R., and M. Thomson, Ed., "Hypertext
+              Transfer Protocol Version 2 (HTTP/2)", RFC 7540,
+              DOI 10.17487/RFC7540, May 2015,
+              <http://www.rfc-editor.org/info/rfc7540>.
+
+   [RFC7541]  Peon, R. and H. Ruellan, "HPACK: Header Compression for
+              HTTP/2", RFC 7541, DOI 10.17487/RFC7541, May 2015,
+              <http://www.rfc-editor.org/info/rfc7541>.
+
+8.2.  URIs
+
+   [1] https://http2.github.io/faq/#why-do-we-need-header-compression
+
+Author's Address
+
+   Charles 'Buck' Krasic (editor)
+   Google
+
+   Email: ckrasic@google.com
+
+
+
+
+
+
+
+
+Krasic                 Expires September 22, 2017               [Page 7]

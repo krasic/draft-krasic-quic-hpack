@@ -1,1 +1,512 @@
-../quic-wg-base-drafts/draft-krasic-quic-hpack.html
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" 
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head profile="http://www.w3.org/2006/03/hcard http://dublincore.org/documents/2008/08/04/dc-html/">
+  <meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+
+  <title>Header Compression for HTTP over QUIC</title>
+
+  
+<style type="text/css">/*<![CDATA[*/
+@viewport {
+  zoom: 1.0;
+  width: extend-to-zoom;
+}
+@-ms-viewport {
+  width: extend-to-zoom;
+  zoom: 1.0;
+}
+
+@media screen and (min-width: 1024px) {
+  ul.toc, #rfc\.toc {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    right: calc(50vw - 500px);
+    width: 300px;
+    padding: 0 1em;
+    z-index: 1;
+  }
+  #rfc\.toc {
+    top: 16px;
+  }
+  ul.toc {
+    top: 80px;
+    overflow: auto;
+  }
+
+  body {
+    padding-left: 1.5em;
+    padding-right: 29em;
+  }
+}
+
+body {
+  font: 15px "Helvetica Neue",Helvetica,Arial,sans-serif;
+  color: #333;
+  font-size-adjust: 0.5;
+  line-height: 130%;
+  margin: 2.5em auto;
+  max-width: 724px;
+}
+
+.title, .filename, h1, h2, h3, h4 {
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size-adjust: 0.5;
+  font-weight: 500;
+  color: #333;
+  line-height: 100%;
+  margin: 0.8em 0 0.3em;
+}
+.title { font-size: 36px; }
+h1 { font-size: 30px; }
+h2 { font-size: 24px; }
+h3, h4 { font-size: 18px; }
+h1 a[href], h2 a[href], h3 a[href], h4 a[href] {
+  color: #333;
+}
+
+ul.toc li {
+  list-style: none;
+  text-indent: -2.5em;
+  padding-left: 2.5em;
+  padding-bottom: 5px;
+  margin: 0;
+}
+ul.toc ul {
+  margin: 0;
+}
+/* xml2rfc nests ul directly inside ul which messes with the style badly */
+ul.toc, ul.toc>ul, ul.toc ul>ul {
+  margin: 0 0 0 1.5em;
+}
+
+table {
+  margin-left: 0em;
+  border-collapse: collapse;
+}
+th {
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+}
+td {
+  border-top: 1px solid #ddd;
+  vertical-align: top;
+}
+tr:nth-child(2n+1) > td,
+tr:nth-child(2n+1) > th {
+  background-color: #f9f9f9;
+}
+td.reference {
+  max-width: 200px;
+  border-top: none;
+  padding-right: 1em;
+}
+.right {
+  text-align: right;
+}
+
+
+table.header {
+  width: 100%;
+}
+table.header td {
+  border: none;
+  background-color: transparent;
+  color: black;
+}
+.filename {
+  color: rgb(119, 119, 119);
+  font-size: 23px;
+  font-weight: normal;
+  height: auto;
+  line-height: 100%;
+}
+#rfc\.abstract+p {
+  font-size: 20px;
+  font-weight: 300;
+  line-height: 130%;
+}
+
+samp, tt, code, pre {
+  font: 11pt consolas, monospace;
+  font-size-adjust: none;
+}
+pre {
+  background-color: #eee;
+  border: 1px solid #ddd;
+  overflow-x: auto;
+  padding: 5px;
+  margin: 5px;
+}
+.figure {
+  font-style: italic;
+  margin: 0 1.5em;
+}
+
+address {
+  margin: 10px 0 0;
+}
+.vcard {
+  font-style: normal;
+}
+.vcardline {
+  display: block;
+}
+.vcardline .fn {
+  font-weight: bold;
+}
+.vcardline .hidden {
+  display: none;
+}
+
+dl {
+  margin-left: 1em;
+}
+dl.dl-horizontal: {
+  margin-left: 0;
+}
+dl > dt {
+  float: left;
+  margin-right: 1em;
+}
+dl.nohang > dt {
+  float: none;
+}
+dl > dd {
+  margin-bottom: .5em;
+}
+dl.compact > dd {
+  margin-bottom: 0em;
+}
+dl > dd > dl {
+  margin-top: 0.5em;
+  margin-bottom: 0em;
+}
+ul.empty {
+  list-style-type: none;
+}
+ul.empty li {
+  margin-top: .5em;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid #eee;
+}
+
+a {
+  text-decoration: none;
+}
+a[href] {
+  color: #2a6496;
+}
+a[href]:hover {
+  background-color: #eee;
+}
+
+ol, ul, li, p {
+  padding: 0;
+  margin: 0.5em 0 0.5em 2em;
+}
+li, p {
+  margin-left: 0;
+}
+address {
+  font-style: normal;
+}
+
+.github-fork-ribbon-wrapper {
+  display: none;
+}
+@media screen and (min-width: 800px) {
+  /* "Fork me on GitHub" CSS ribbon based on
+   * https://github.com/simonwhitaker/github-fork-ribbon-css
+   */
+  .github-fork-ribbon {
+    position: absolute;
+    padding: 2px 0;
+    background-color: #a00;
+    background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.15));
+    box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.5);
+    font: 700 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+    pointer-events: auto;
+
+    top: 38px;
+    right: -45px;
+
+    transform: rotate(45deg);
+  }
+
+  .github-fork-ribbon a[href],
+  .github-fork-ribbon a[href]:hover {
+    color: #fff;
+    background-color: transparent;
+    text-decoration: none;
+    text-shadow: 0 -1px rgba(0, 0, 0, 0.5);
+    text-align: center;
+
+    width: 190px;
+    line-height: 18px;
+
+    display: inline-block;
+    padding: 2px 0;
+
+    border: 1.5px dotted #fff;
+    border-color: rgba(255, 255, 255, 0.6);
+  }
+
+  .github-fork-ribbon-wrapper {
+    display: block;
+    width: 130px;
+    height: 130px;
+    position: absolute;
+    overflow: hidden;
+    top: 0; right: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+}
+@media screen and (min-width: 1000px) {
+  .github-fork-ribbon-wrapper {
+    position: fixed;
+  }
+  /*]]>*/</style>
+
+
+  <link href="#rfc.toc" rel="Contents"/>
+<link href="#rfc.section.1" rel="Chapter" title="1 Introduction"/>
+<link href="#rfc.section.2" rel="Chapter" title="2 QPACK overview"/>
+<link href="#rfc.section.2.1" rel="Chapter" title="2.1 Example of HoL blocking"/>
+<link href="#rfc.section.2.2" rel="Chapter" title="2.2 How QPACK avoids HoL blocking"/>
+<link href="#rfc.section.2.2.1" rel="Chapter" title="2.2.1 Absolute Indexing"/>
+<link href="#rfc.section.3" rel="Chapter" title="3 Changes to HPACK and HTTP over QUIC"/>
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 HPACK changes"/>
+<link href="#rfc.section.3.1.1" rel="Chapter" title="3.1.1 Indexed representations"/>
+<link href="#rfc.section.3.1.2" rel="Chapter" title="3.1.2 Indexing"/>
+<link href="#rfc.section.3.2" rel="Chapter" title="3.2 HTTP Mapping changes"/>
+<link href="#rfc.section.3.2.1" rel="Chapter" title="3.2.1 Table evictions"/>
+<link href="#rfc.section.4" rel="Chapter" title="4 Performance considerations"/>
+<link href="#rfc.section.5" rel="Chapter" title="5 Security Considerations"/>
+<link href="#rfc.section.6" rel="Chapter" title="6 IANA Considerations"/>
+<link href="#rfc.section.7" rel="Chapter" title="7 Acknowledgements"/>
+<link href="#rfc.references" rel="Chapter" title="8 Normative References"/>
+<link href="#rfc.authors" rel="Chapter"/>
+
+
+  <meta name="generator" content="xml2rfc version 2.5.2 - http://tools.ietf.org/tools/xml2rfc" />
+  <link rel="schema.dct" href="http://purl.org/dc/terms/" />
+
+  <meta name="dct.creator" content="Krasic, C., Ed." />
+  <meta name="dct.identifier" content="urn:ietf:id:draft-krasic-qpack-latest" />
+  <meta name="dct.issued" scheme="ISO8601" content="2017-3-21" />
+  <meta name="dct.abstract" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression " />
+  <meta name="description" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression " />
+
+</head>
+
+<body>
+
+  <table class="header">
+    <tbody>
+    
+    	<tr>
+  <td class="left">QUIC</td>
+  <td class="right">C. Krasic, Ed.</td>
+</tr>
+<tr>
+  <td class="left">Internet-Draft</td>
+  <td class="right">Google</td>
+</tr>
+<tr>
+  <td class="left">Intended status: Standards Track</td>
+  <td class="right">March 21, 2017</td>
+</tr>
+<tr>
+  <td class="left">Expires: September 22, 2017</td>
+  <td class="right"></td>
+</tr>
+
+    	
+    </tbody>
+  </table>
+
+  <p class="title">Header Compression for HTTP over QUIC<br />
+  <span class="filename">draft-krasic-qpack-latest</span></p>
+  
+  <h1 id="rfc.abstract">
+  <a href="#rfc.abstract">Abstract</a>
+</h1>
+<p>The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression <a href="https://http2.github.io/faq/#why-do-we-need-header-compression">HTTP2 FAQ</a>.  A key advantage of the QUIC transport is that provides stream multplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a variation of HPACK and mechanisms in QUIC&#8217;s HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking.</p>
+<h1 id="rfc.status">
+  <a href="#rfc.status">Status of This Memo</a>
+</h1>
+<p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
+<p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at http://datatracker.ietf.org/drafts/current/.</p>
+<p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
+<p>This Internet-Draft will expire on September 22, 2017.</p>
+<h1 id="rfc.copyrightnotice">
+  <a href="#rfc.copyrightnotice">Copyright Notice</a>
+</h1>
+<p>Copyright (c) 2017 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
+<p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (http://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
+
+  
+  <hr class="noprint" />
+  <h1 class="np" id="rfc.toc"><a href="#rfc.toc">Table of Contents</a></h1>
+  <ul class="toc">
+
+  	<li>1.   <a href="#rfc.section.1">Introduction</a></li>
+<li>2.   <a href="#rfc.section.2">QPACK overview</a></li>
+<ul><li>2.1.   <a href="#rfc.section.2.1">Example of HoL blocking</a></li>
+<li>2.2.   <a href="#rfc.section.2.2">How QPACK avoids HoL blocking</a></li>
+<ul><li>2.2.1.   <a href="#rfc.section.2.2.1">Absolute Indexing</a></li>
+</ul></ul><li>3.   <a href="#rfc.section.3">Changes to HPACK and HTTP over QUIC</a></li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">HPACK changes</a></li>
+<ul><li>3.1.1.   <a href="#rfc.section.3.1.1">Indexed representations</a></li>
+<li>3.1.2.   <a href="#rfc.section.3.1.2">Indexing</a></li>
+</ul><li>3.2.   <a href="#rfc.section.3.2">HTTP Mapping changes</a></li>
+<ul><li>3.2.1.   <a href="#rfc.section.3.2.1">Table evictions</a></li>
+</ul></ul><li>4.   <a href="#rfc.section.4">Performance considerations</a></li>
+<li>5.   <a href="#rfc.section.5">Security Considerations</a></li>
+<li>6.   <a href="#rfc.section.6">IANA Considerations</a></li>
+<li>7.   <a href="#rfc.section.7">Acknowledgements</a></li>
+<li>8.   <a href="#rfc.references">Normative References</a></li>
+<li><a href="#rfc.authors">Author's Address</a></li>
+
+
+  </ul>
+
+  <h1 id="rfc.section.1"><a href="#rfc.section.1">1.</a> <a href="#introduction" id="introduction">Introduction</a></h1>
+<p id="rfc.section.1.p.1">The QUIC transport protocol was designed from the outset to support HTTP semantics, and its design subsumes most of the features of HTTP/2.  Two of those features, stream multiplexing and header compression come into some conflict in QUIC.  A key goal of QUIC&#8217;s design is to improve stream multiplexing relative to HTTP/2, by eliminating HoL (head of line) blocking that can occur in HTTP/2.  HoL blocking can happen because HTTP/2 streams are multiplexed onto a single TCP connection with its in-order semantics.  QUIC can maintain independence between streams because it implements core transport functionality in a fully stream-aware manner.  However, the HTTP over QUIC mapping is still subject HoL blocking if HPACK is used directly as in HTTP/2.  HPACK exploits multiplexing for greater compression, shrinking the representation of headers that have appeared earlier on the same connection.  In the context of QUIC, this imposes a vulnerability to HoL blocking as will be described more below.</p>
+<p id="rfc.section.1.p.2">QUIC is described in <a href="#QUIC-TRANSPORT">[QUIC-TRANSPORT]</a>.  The HTTP over QUIC mapping is decribed in <a href="#QUIC-HTTP">[QUIC-HTTP]</a>. For a full description of HTTP/2, see <a href="#RFC7540">[RFC7540]</a>.  The description of HPACK is <a href="#RFC7541">[RFC7541]</a>.</p>
+<h1 id="rfc.section.2"><a href="#rfc.section.2">2.</a> <a href="#qpack-overview" id="qpack-overview">QPACK overview</a></h1>
+<p id="rfc.section.2.p.1">Readers may wish to refer to <a href="#RFC7540">[RFC7540]</a> Section 1.4 to review HPACK terminology, and <a href="#QUIC-HTTP">[QUIC-HTTP]</a>, Sections 4 on &#8220;HTTP over QUIC stream mapping&#8221; and 4.2.1 on &#8220;Header Compression&#8221;.</p>
+<p id="rfc.section.2.p.2">This draft extends HPACK and the HTTP over QUIC mapping with the <em>option</em> to avoid HoL blocking, in a backward compatible fashion.  QPACK strives to solve HoL blocking in the simplest way possible. To that end, the mechanisms QPACK defines are largely at the granularity of header blocks, as opposed to individual header field representations.</p>
+<h2 id="rfc.section.2.1"><a href="#rfc.section.2.1">2.1.</a> <a href="#example-of-hol-blocking" id="example-of-hol-blocking">Example of HoL blocking</a></h2>
+<p id="rfc.section.2.1.p.1">The following is an example of how HPACK can induce HoL blocking in QUIC. Assume two message control streams <samp>A</samp> and <samp>B</samp>, and corresponding header blocks <samp>HA</samp> and <samp>HB</samp>. Stream <samp>B</samp> experiences HoL blocking due to <samp>A</samp> as follows:</p>
+<p/>
+
+<ol>
+  <li>HPACK encodes header field <samp>HB[i]</samp> using an index that refers to a table entry that resulted from header field <samp>HA[j]</samp>.</li>
+  <li><samp>HA</samp> and <samp>HB</samp> are delivered via distinct packets that are inflight in the same round trip.</li>
+  <li><samp>HB</samp>&#8217;s packet is delivered but <samp>HA</samp>&#8217;s is dropped.  HPACK can not decode <samp>HB</samp> until <samp>HA</samp>&#8217;s packet is successfully retransmitted.</li>
+</ol>
+<h2 id="rfc.section.2.2"><a href="#rfc.section.2.2">2.2.</a> <a href="#how-qpack-avoids-hol-blocking" id="how-qpack-avoids-hol-blocking">How QPACK avoids HoL blocking</a></h2>
+<p id="rfc.section.2.2.p.1">Continuing the example, QPACK&#8217;s approach is as follows.</p>
+<p/>
+
+<ol>
+  <li><samp>HB[i]</samp> can refer to <samp>HA[j]</samp> if <samp>HA[j]</samp> was delivered in a prior round trip.</li>
+  <li><samp>HB[i]</samp> can refer to <samp>HA[j]</samp> if <samp>HA</samp> and <samp>HB</samp> are to be delivered in the same packet.</li>
+  <li>If QPACK is enabled, <samp>HB[i]</samp> will be represented using an HPACK literal.  Otherwise an indexed representation may be used, but HB must processed in-order, after HA.</li>
+</ol>
+<p id="rfc.section.2.2.p.3">It is worth noting that rules 1. and 2. are situations where <samp>HB</samp> is not at risk of HoL blocking, even without QPACK.  Only in rule 3 does QPACK come into play giving the encoder the choice between HoL avoidance or better compression.</p>
+<h3 id="rfc.section.2.2.1"><a href="#rfc.section.2.2.1">2.2.1.</a> <a href="#absolute-indexing" id="absolute-indexing">Absolute Indexing</a></h3>
+<p id="rfc.section.2.2.1.p.1">HPACK indexed entries refer to an entry by its current position in the dynamic table.  As Figure 1 of <a href="#RFC7541">[RFC7541]</a> illustrates, newest entries have smallest indices, and oldest entries are evicted first if the table is full.  Under this scheme, each insertion to the table causes the index of all existing entries to change (implicitly).  The approach is acceptable for HTTP/2 because TCP is totally ordered, but it is is problematic in the out-of-order context of QUIC.</p>
+<p id="rfc.section.2.2.1.p.2">QPACK uses a hybrid absolute-relative indexing approach.  Every QPACK header block starts with an integer that conveys the base index, the total number of entries that had been inserted to the dynamic table before encoding the current header block.  The format of individual indexed representations does not change, but their semantics become absolute in combination with the base index.  Similarly, the base index is used to perform table insertions at unambiguous positions.</p>
+<h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a> <a href="#changes-to-hpack-and-http-over-quic" id="changes-to-hpack-and-http-over-quic">Changes to HPACK and HTTP over QUIC</a></h1>
+<p id="rfc.section.3.p.1">QPACK is optional on a per header block basis, and signaled by a new flag in the HEADERS and PUSH_PROMISE frames.  If this flag is absent, then the header block should be processed in strict order as per Section 4.2.1 of the HTTP mapping.</p>
+<h2 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#hpack-changes" id="hpack-changes">HPACK changes</a></h2>
+<p id="rfc.section.3.1.p.1">QPACK adds three integer <em>epochs</em> to HPACK state, all derived from the sequence numbers of HTTP Mapping (refer to <a href="#QUIC-HTTP">[QUIC-HTTP]</a> Sections 5.2.2 and 5.2.4.), and provided to the HPACK layer by the HTTP mapping:</p>
+<p/>
+
+<ol>
+  <li><em>encode epoch</em>: the sequence number of the frame enclosing the header block, as per the HTTP Mapping.  When entries are added to they dynamic table, the current encode epoch is stored with the entry.</li>
+  <li><em>packet epoch</em>: the first encode epoch in the current QUIC packet.  When multiple header blocks are packed into a single QUIC packet, the header blocks should be ordered.</li>
+  <li><em>commit epoch</em>: the highest in-order encode epoch acknowledged to the encoder side.</li>
+</ol>
+<p id="rfc.section.3.1.p.3">The following must hold: <samp>encode epoch &gt;= packet epoch &gt; commit epoch</samp>.  The next section provides more detail of how the values are computed.</p>
+<h3 id="rfc.section.3.1.1"><a href="#rfc.section.3.1.1">3.1.1.</a> <a href="#indexed-representations" id="indexed-representations">Indexed representations</a></h3>
+<p id="rfc.section.3.1.1.p.1">As each header block is processed, HPACK is informed whether QPACK is enabled.  If so, the encoder will emit an indexed representation only if there is a matching entry in the dyamic table such that: <samp>entry.encode_epoch &lt;= commit_epoch or entry.encode_epoch &gt;= packet_epoch</samp>.  Otherwise a literal must be used.</p>
+<h3 id="rfc.section.3.1.2"><a href="#rfc.section.3.1.2">3.1.2.</a> <a href="#indexing" id="indexing">Indexing</a></h3>
+<p id="rfc.section.3.1.2.p.1">Every QPACK header block must start with a single HPACK integer that encodes the value of the base index.  As described above, the decoder will use this as the starting point for insertions, and for interpreting indexed representations.</p>
+<h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2.</a> <a href="#http-mapping-changes" id="http-mapping-changes">HTTP Mapping changes</a></h2>
+<p id="rfc.section.3.2.p.1">HoL avoidance is signalled on a per header block basis, a new flag is reserved in HEADER frames that signals whether the block is QPACK encoded.  When received on the decoding side, if the HEADER frame contains the QPACK flag set, then the header block may be processes immediatly instead of in-order.</p>
+<p id="rfc.section.3.2.p.2">When sending headers, the HTTP mapping layer provides the commit, packet, and encoding epochs to the HPACK layer:</p>
+<p/>
+
+<ul>
+  <li>then encoding epoch increments for every new header encoded.</li>
+  <li>the mapping layer keeps track of header blocks by their encode epochs, and monitors transport acknolwedgments to determine when the commit epoch can advance, that is when the highest in-order acknowledged encode epoch has increased.  <em>This piggybacks on existing QUIC transport mechanisms, no additional wire format changes are needed.</em></li>
+  <li>the mapping layer coordinates with packet writing to manange space available for header blocks, and increments the packet epoch at packet boundaries.  <em>Although sub-optimal, an simpler implementation could ignore packet boundaries and hold that .</em><samp>packet epoch == encode epoch</samp></li>
+</ul>
+<h3 id="rfc.section.3.2.1"><a href="#rfc.section.3.2.1">3.2.1.</a> <a href="#table-evictions" id="table-evictions">Table evictions</a></h3>
+<p id="rfc.section.3.2.1.p.1">Since QPACK allows headers to be processed out of order, it might be possible that an header block may contain references to entries that have already been evicted by the time it arrives.  For example, suppose HB was encoded after HA, and HB evicts an entry reference by HA.   If due to network drops HB is decoded first, the reference in HA will become invalid.</p>
+<p id="rfc.section.3.2.1.p.2">To handle this with minimal complexity, QPACK takes the following approach: if while encoding the current header block, an eviction becomes necessary, then QPACK must be disabled for the current header block.  In the above example, HB could not be QPACK enabled, hence decoding HB must wait for HA to be decoded first.</p>
+<p id="rfc.section.3.2.1.p.3">*Compared to other QUIC state such as receive buffers, the default table size of 4,096 octets (see <a href="#RFC7540">[RFC7540]</a> Section 6.5.2.) is very modest.  Deployment data suggests it is rarely increased in practice, and experiments to increase it did not yield significant gains.  Consequently, I think it&#8217;s best to avoid any heroic measures to deal with performance under full tables. *</p>
+<h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#performance-considerations" id="performance-considerations">Performance considerations</a></h1>
+<p id="rfc.section.4.p.1">Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4, the only additional overhead of QPACK is the base index added to header blocks.  In the common case, the index should consume 1 byte per header block.</p>
+<p id="rfc.section.4.p.2">It might be advantageous to allow implemenations to send header frames on the HTTP control stream (QUIC stream 3).  Such headers would not be associated with any HTTP transaction, but could be used strategically to improve performance. For instance, as a means to avoid disabling QPACK because of table eviction, or to ensure most frequently used entries have the smallest indices.</p>
+<h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
+<p id="rfc.section.5.p.1">TBD.</p>
+<h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
+<p id="rfc.section.6.p.1">This document currently makes no request of IANA, and might not need to.</p>
+<h1 id="rfc.section.7"><a href="#rfc.section.7">7.</a> <a href="#acknowledgements" id="acknowledgements">Acknowledgements</a></h1>
+<p id="rfc.section.7.p.1">This draft draws heavily on the text of <a href="#RFC7541">[RFC7541]</a>.  The indirect input of those authors is gratefully acknowledged, as well as ideas from:</p>
+<p/>
+
+<ul>
+  <li>Mike Bishop</li>
+  <li>Patrick McManus</li>
+  <li>Biren Roy</li>
+</ul>
+<h1 id="rfc.references"><a href="#rfc.references">8.</a> Normative References</h1>
+<table>
+  <tbody>
+    <tr>
+      <td class="reference">
+        <b id="QUIC-HTTP">[QUIC-HTTP]</b>
+      </td>
+      <td class="top"><a title="Microsoft">Bishop, M.</a>, "<a>Hypertext Transfer Protocol (HTTP) over QUIC</a>"</td>
+    </tr>
+    <tr>
+      <td class="reference">
+        <b id="QUIC-TRANSPORT">[QUIC-TRANSPORT]</b>
+      </td>
+      <td class="top"><a title="Google">Iyengar, J.</a> and <a title="Mozilla">M. Thomson</a>, "<a>QUIC: A UDP-Based Multiplexed and Secure Transport</a>"</td>
+    </tr>
+    <tr>
+      <td class="reference">
+        <b id="RFC7540">[RFC7540]</b>
+      </td>
+      <td class="top"><a>Belshe, M.</a>, <a>Peon, R.</a> and <a>M. Thomson</a>, "<a href="http://tools.ietf.org/html/rfc7540">Hypertext Transfer Protocol Version 2 (HTTP/2)</a>", RFC 7540, DOI 10.17487/RFC7540, May 2015.</td>
+    </tr>
+    <tr>
+      <td class="reference">
+        <b id="RFC7541">[RFC7541]</b>
+      </td>
+      <td class="top"><a>Peon, R.</a> and <a>H. Ruellan</a>, "<a href="http://tools.ietf.org/html/rfc7541">HPACK: Header Compression for HTTP/2</a>", RFC 7541, DOI 10.17487/RFC7541, May 2015.</td>
+    </tr>
+  </tbody>
+</table>
+<h1 id="rfc.authors">
+  <a href="#rfc.authors">Author's Address</a>
+</h1>
+<div class="avoidbreak">
+  <address class="vcard">
+	<span class="vcardline">
+	  <span class="fn">Charles 'Buck' Krasic</span> (editor)
+	  <span class="n hidden">
+		<span class="family-name">Krasic</span>
+	  </span>
+	</span>
+	<span class="org vcardline">Google</span>
+	<span class="adr">
+	  
+	  <span class="vcardline">
+		<span class="locality"></span> 
+		<span class="region"></span>
+		<span class="code"></span>
+	  </span>
+	  <span class="country-name vcardline"></span>
+	</span>
+	<span class="vcardline">EMail: <a href="mailto:ckrasic@google.com">ckrasic@google.com</a></span>
+
+  </address>
+</div>
+
+</body>
+</html>

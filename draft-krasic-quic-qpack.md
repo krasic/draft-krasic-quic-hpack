@@ -138,9 +138,9 @@ to perform table insertions at unambiguous positions.
 
 # Changes to HPACK and HTTP over QUIC
 
-QPACK is optional on a per header block basis, and signaled by a new flag in the
-HEADERS and PUSH_PROMISE frames.  If this flag is absent, then the header block
-should be processed in strict order as per Section 4.2.1 of the HTTP mapping.
+QPACK is optional on a per header block basis.  A QPACK enabled header block can
+be decoded on receipt, otherwise the header block should be processed in strict
+order as per Section 4.2.1 of the HTTP mapping.
 
 ## HPACK changes
 
@@ -223,8 +223,9 @@ heroic measures to deal with performance under full tables. *
 # Performance considerations
 
 Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4, the only
-additional overhead of QPACK is the base index added to header blocks.  In the
-common case, the index should consume 1 byte per header block.
+additional overhead of QPACK is the base index added to header blocks.  For a
+connection with fewer than 256 requests, the index would consume 1 byte per
+header block.
 
 It might be advantageous to allow implemenations to send header frames on
 the HTTP control stream (QUIC stream 3).  Such headers would not be associated
@@ -232,8 +233,10 @@ with any HTTP transaction, but could be used strategically to improve
 performance. For instance, as a means to avoid disabling QPACK because of table
 eviction, or to ensure most frequently used entries have the smallest indices.
 
-If QPACK were mandatory, and fallback to totally ordered processing not allowed,
-then the sequence number could be removed from the wire format.
+For QPACK header blocks, the base index is sufficient to decode correctly.  If
+QPACK were made mandatory, and fallback to totally ordered processing not
+eliminated from the design, then the sequence number could be removed from the
+wire format.
 
 Alternatively, if it were desirable to support a middle ground between totally
 ordered HPACK and the present draft, one way might be to extend the concept of

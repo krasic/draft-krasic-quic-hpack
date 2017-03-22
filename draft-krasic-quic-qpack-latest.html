@@ -430,7 +430,7 @@ address {
 <p/>
 
 <ul>
-  <li>then encoding epoch increments for every new header encoded.</li>
+  <li>the encoding epoch increments for every new header encoded.</li>
   <li>an encode epoch is considered acknowledged when all the bytes of the corresponding header block have been acknowledged.  The mapping layer keeps track of header blocks by their encode epochs, and monitors transport acknolwedgments to determine <samp>commit_epoch</samp>, the highest in-order acknowledged encode epoch.  <em>This piggybacks on existing QUIC transport mechanisms, no additional wire format changes are needed.</em></li>
   <li>the mapping layer coordinates with packet writing to manange space available for header blocks, and advances the packet epoch at packet boundaries.  <em>Although sub-optimal, an simpler implementation could ignore packet boundaries and hold that .</em><samp>packet epoch == encode epoch</samp></li>
 </ul>
@@ -441,6 +441,8 @@ address {
 <h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#performance-considerations" id="performance-considerations">Performance considerations</a></h1>
 <p id="rfc.section.4.p.1">Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4, the only additional overhead of QPACK is the base index added to header blocks.  In the common case, the index should consume 1 byte per header block.</p>
 <p id="rfc.section.4.p.2">It might be advantageous to allow implemenations to send header frames on the HTTP control stream (QUIC stream 3).  Such headers would not be associated with any HTTP transaction, but could be used strategically to improve performance. For instance, as a means to avoid disabling QPACK because of table eviction, or to ensure most frequently used entries have the smallest indices.</p>
+<p id="rfc.section.4.p.3">If QPACK were mandatory, and fallback to totally ordered processing not allowed, then the sequence number could be removed from the wire format.</p>
+<p id="rfc.section.4.p.4">Alternatively, if it were desirable to support a middle ground between totally ordered HPACK and the present draft, one way might be to extend the concept of packet epoch to denote a sequence of one <em>or more</em> packets.  A pair of new flags would be added to header frames to signal the start and end of such packet sequences.  The decoder would have to have buffering based logic to ensure header blocks within a packet sequence are processed in order, similar to the logic used in totally ordered HPACK.</p>
 <h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
 <p id="rfc.section.5.p.1">TBD.</p>
 <h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>

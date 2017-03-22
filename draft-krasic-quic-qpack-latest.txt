@@ -80,8 +80,8 @@ Table of Contents
      3.2.  HTTP Mapping changes  . . . . . . . . . . . . . . . . . .   5
        3.2.1.  Table evictions . . . . . . . . . . . . . . . . . . .   6
    4.  Performance considerations  . . . . . . . . . . . . . . . . .   6
-   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   6
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   7
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   7
    7.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .   7
    8.  Normative References  . . . . . . . . . . . . . . . . . . . .   7
    Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   7
@@ -259,7 +259,7 @@ Internet-Draft                    HPACK                       March 2017
    layer whether QPACK is set, and provides the commit, packet, and
    encoding epochs:
 
-   o  then encoding epoch increments for every new header encoded.
+   o  the encoding epoch increments for every new header encoded.
 
    o  an encode epoch is considered acknowledged when all the bytes of
       the corresponding header block have been acknowledged.  The
@@ -318,6 +318,26 @@ Internet-Draft                    HPACK                       March 2017
    avoid disabling QPACK because of table eviction, or to ensure most
    frequently used entries have the smallest indices.
 
+   If QPACK were mandatory, and fallback to totally ordered processing
+   not allowed, then the sequence number could be removed from the wire
+   format.
+
+   Alternatively, if it were desirable to support a middle ground
+   between totally ordered HPACK and the present draft, one way might be
+   to extend the concept of packet epoch to denote a sequence of one _or
+   more_ packets.  A pair of new flags would be added to header frames
+   to signal the start and end of such packet sequences.  The decoder
+   would have to have buffering based logic to ensure header blocks
+   within a packet sequence are processed in order, similar to the logic
+   used in totally ordered HPACK.
+
+
+
+Krasic                 Expires September 23, 2017               [Page 6]
+
+Internet-Draft                    HPACK                       March 2017
+
+
 5.  Security Considerations
 
    TBD.
@@ -326,17 +346,6 @@ Internet-Draft                    HPACK                       March 2017
 
    This document currently makes no request of IANA, and might not need
    to.
-
-
-
-
-
-
-
-Krasic                 Expires September 23, 2017               [Page 6]
-
-Internet-Draft                    HPACK                       March 2017
-
 
 7.  Acknowledgements
 
@@ -375,15 +384,6 @@ Author's Address
    Google
 
    Email: ckrasic@google.com
-
-
-
-
-
-
-
-
-
 
 
 

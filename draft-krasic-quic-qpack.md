@@ -186,7 +186,7 @@ QPACK (0x8): This header block can be decoded upon receipt.
 When encoding headers, the HTTP mapping layer notifies the HPACK layer whether
 QPACK is set, and provides the commit, packet, and encoding epochs:
 
-* then encoding epoch increments for every new header encoded.
+* the encoding epoch increments for every new header encoded.
 
 * an encode epoch is considered acknowledged when all the bytes of the
   corresponding header block have been acknowledged.  The mapping layer keeps

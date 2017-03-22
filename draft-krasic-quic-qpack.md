@@ -17,7 +17,6 @@ author:
     name: Charles 'Buck' Krasic
     org: Google
     email: ckrasic@google.com
-    role: editor
 
 normative:
 
@@ -132,12 +131,10 @@ change (implicitly).  The approach is acceptable for HTTP/2 because TCP is
 totally ordered, but it is is problematic in the out-of-order context of QUIC.
 
 QPACK uses a hybrid absolute-relative indexing approach.  Every QPACK header
-block starts with an integer that conveys the base index, the total number of
-entries that had been inserted to the dynamic table before encoding the current
-header block.  The format of individual indexed representations does not change,
-but their semantics become absolute in combination with the base index.
-Similarly, the base index is used to perform table insertions at unambiguous
-positions.
+block starts with an integer that conveys an absolute base index.  The format of
+individual indexed representations does not change, but their semantics become
+absolute in combination with the base index.  Similarly, the base index is used
+to perform table insertions at unambiguous positions.
 
 # Changes to HPACK and HTTP over QUIC
 
@@ -161,38 +158,41 @@ provided to the HPACK layer by the HTTP mapping:
    encoder side.
 
 The following must hold: `encode_epoch >= packet_epoch > commit_epoch`.
-The next section provides more detail of how the values are computed.
+Section 3.2 describes ho the epoch values are computed.
 
 ### Indexed representations
 
 As each header block is processed, HPACK is informed whether QPACK is enabled.
-If so, the encoder will emit an indexed representation only if there is a
-matching entry in the dyamic table such that: `entry.encode_epoch <=
-commit_epoch or entry.encode_epoch >= packet_epoch`.  Otherwise a literal must
-be used.
+If so, the encoder will emit an indexed representation only if it is not
+vulnerable to HoL blocking, that is if there is a matching entry in the dyamic
+table such that: `entry.encode_epoch <= commit_epoch or entry.encode_epoch >=
+packet_epoch`.  Otherwise a literal must be used.
 
 ### Indexing
 
 Every QPACK header block must start with a single HPACK integer that encodes the
-value of the base index.  As described above, the decoder will use this as the
-starting point for insertions, and for interpreting indexed representations.
+value of the base index, defined as the total number of entries that had been
+inserted to the dynamic table before encoding the current header block.  As
+described above, the decoder will use this as the starting point for insertions,
+and for interpreting indexed representations.
 
 ## HTTP Mapping changes
 
-HoL avoidance is signalled on a per header block basis, a new flag is reserved
-in HEADER frames that signals whether the block is QPACK encoded.  When received
-on the decoding side, if the HEADER frame contains the QPACK flag set, then the
-header block may be processes immediatly instead of in-order.
+An additional flag is added to HEADERS and PUSH_PROMISE (refer to Sections
+5.2.1. and 5.2.4. of {{QUIC-HTTP}}):
 
-When sending headers, the HTTP mapping layer provides the commit, packet, and
-encoding epochs to the HPACK layer:
+QPACK (0x8): This header block can be decoded upon receipt.
+
+When encoding headers, the HTTP mapping layer notifies the HPACK layer whether
+QPACK is set, and provides the commit, packet, and encoding epochs:
 
 * then encoding epoch increments for every new header encoded.
 
-* the mapping layer keeps track of header blocks by their encode epochs, and
-  monitors transport acknolwedgments to determine when `commit_epoch` can
-  advance, that is when the highest in-order acknowledged encode epoch has
-  increased.  *This piggybacks on existing QUIC transport mechanisms, no
+* an encode epoch is considered acknowledged when all the bytes of the
+  corresponding header block have been acknowledged.  The mapping layer keeps
+  track of header blocks by their encode epochs, and monitors transport
+  acknolwedgments to determine `commit_epoch`, the highest in-order acknowledged
+  encode epoch.  *This piggybacks on existing QUIC transport mechanisms, no
   additional wire format changes are needed.*
 
 * the mapping layer coordinates with packet writing to manange space available

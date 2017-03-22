@@ -176,6 +176,26 @@ inserted to the dynamic table before encoding the current header block.  As
 described above, the decoder will use this as the starting point for insertions,
 and for interpreting indexed representations.
 
+### Table evictions
+
+Since QPACK allows headers to be processed out of order, it might be possible
+that an header block may contain references to entries that have already been
+evicted by the time it arrives.  For example, suppose HB was encoded after HA,
+and HB evicts an entry referenced by HA.   If due to network drops HB is decoded
+first, the reference in HA will become invalid.
+
+To handle this with minimal complexity, QPACK takes the following approach: if
+while encoding the current header block, an eviction becomes necessary, then
+QPACK must be disabled for the current header block.  In the above example, HB
+could not be QPACK enabled, hence decoding HB must wait for HA to be decoded
+first.
+
+*Compared to other QUIC state such as receive buffers, the default table size of
+4,096 octets (see {{!RFC7540}} Section 6.5.2.) is very modest.  Deployment data
+suggests it is rarely increased in practice, and experiments to increase it did
+not yield significant gains.  Consequently, I think it's best to avoid any
+heroic measures to deal with performance under full tables. *
+
 ## HTTP Mapping changes
 
 An additional flag is added to HEADERS and PUSH_PROMISE (refer to Sections
@@ -199,26 +219,6 @@ QPACK is set, and provides the commit, packet, and encoding epochs:
   for header blocks, and advances the packet epoch at packet boundaries.
   *Although sub-optimal, an simpler implementation could ignore packet
   boundaries and hold that `packet epoch == encode epoch`.*
-
-### Table evictions
-
-Since QPACK allows headers to be processed out of order, it might be possible
-that an header block may contain references to entries that have already been
-evicted by the time it arrives.  For example, suppose HB was encoded after HA,
-and HB evicts an entry referenced by HA.   If due to network drops HB is decoded
-first, the reference in HA will become invalid.
-
-To handle this with minimal complexity, QPACK takes the following approach: if
-while encoding the current header block, an eviction becomes necessary, then
-QPACK must be disabled for the current header block.  In the above example, HB
-could not be QPACK enabled, hence decoding HB must wait for HA to be decoded
-first.
-
-*Compared to other QUIC state such as receive buffers, the default table size of
-4,096 octets (see {{!RFC7540}} Section 6.5.2.) is very modest.  Deployment data
-suggests it is rarely increased in practice, and experiments to increase it did
-not yield significant gains.  Consequently, I think it's best to avoid any
-heroic measures to deal with performance under full tables. *
 
 # Performance considerations
 

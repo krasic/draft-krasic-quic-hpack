@@ -287,7 +287,7 @@ Internet-Draft                    HPACK                       March 2017
    Since QPACK allows headers to be processed out of order, it might be
    possible that an header block may contain references to entries that
    have already been evicted by the time it arrives.  For example,
-   suppose HB was encoded after HA, and HB evicts an entry reference by
+   suppose HB was encoded after HA, and HB evicts an entry referenced by
    HA.  If due to network drops HB is decoded first, the reference in HA
    will become invalid.
 

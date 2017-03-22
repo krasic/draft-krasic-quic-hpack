@@ -205,7 +205,7 @@ QPACK is set, and provides the commit, packet, and encoding epochs:
 Since QPACK allows headers to be processed out of order, it might be possible
 that an header block may contain references to entries that have already been
 evicted by the time it arrives.  For example, suppose HB was encoded after HA,
-and HB evicts an entry reference by HA.   If due to network drops HB is decoded
+and HB evicts an entry referenced by HA.   If due to network drops HB is decoded
 first, the reference in HA will become invalid.
 
 To handle this with minimal complexity, QPACK takes the following approach: if

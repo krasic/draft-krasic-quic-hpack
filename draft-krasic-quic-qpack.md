@@ -218,7 +218,7 @@ QPACK is set, and provides the commit, packet, and encoding epochs:
 * the mapping layer coordinates with packet writing to manange space available
   for header blocks, and advances the packet epoch at packet boundaries.
   *Although sub-optimal, an simpler implementation could ignore packet
-  boundaries and hold that `packet epoch == encode epoch`.*
+  boundaries and hold that: `packet_epoch == encode_epoch`.*
 
 # Performance considerations
 

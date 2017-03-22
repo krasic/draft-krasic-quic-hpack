@@ -232,6 +232,17 @@ with any HTTP transaction, but could be used strategically to improve
 performance. For instance, as a means to avoid disabling QPACK because of table
 eviction, or to ensure most frequently used entries have the smallest indices.
 
+If QPACK were mandatory, and fallback to totally ordered processing not allowed,
+then the sequence number could be removed from the wire format.
+
+Alternatively, if it were desirable to support a middle ground between totally
+ordered HPACK and the present draft, one way might be to extend the concept of
+packet epoch to denote a sequence of one *or more* packets.  A pair of new flags
+would be added to header frames to signal the start and end of such packet
+sequences.  The decoder would have to have buffering based logic to ensure
+header blocks within a packet sequence are processed in order, similar to the
+logic used in totally ordered HPACK.
+
 # Security Considerations
 
 TBD.

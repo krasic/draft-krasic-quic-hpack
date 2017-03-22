@@ -50,12 +50,12 @@ normative:
 The design of the core QUIC transport and the mapping of HTTP semantics over it
 subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP
 header compression.  A key advantage of the QUIC transport is that provides
-stream multplexing free of HoL blocking between streams, while in HTTP/2
+stream multiplexing free of HoL blocking between streams, while in HTTP/2
 multiplexed streams can suffer HoL blocking primarily due to HTTP/2's layering
 above TCP.  However, assuming HPACK is used for header compression, HTTP over
 QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header
 redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a
-variation of HPACK and mechanisms in QUIC's HTTP mapping that allow QUIC
+variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC
 implementations the flexibility to avoid header-compression induced HoL
 blocking.
 
@@ -66,20 +66,20 @@ blocking.
 The QUIC transport protocol was designed from the outset to support HTTP
 semantics, and its design subsumes most of the features of HTTP/2.  Two of those
 features, stream multiplexing and header compression come into some conflict in
-QUIC.  A key goal of QUIC's design is to improve stream multiplexing relative to
-HTTP/2, by eliminating HoL (head of line) blocking that can occur in HTTP/2.
-HoL blocking can happen because HTTP/2 streams are multiplexed onto a single TCP
-connection with its in-order semantics.  QUIC can maintain independence between
-streams because it implements core transport functionality in a fully
-stream-aware manner.  However, the HTTP over QUIC mapping is still subject HoL
-blocking if HPACK is used directly as in HTTP/2.  HPACK exploits multiplexing
-for greater compression, shrinking the representation of headers that have
-appeared earlier on the same connection.  In the context of QUIC, this imposes a
-vulnerability to HoL blocking as will be described more below.
+QUIC.  A key goal of the design of QUIC is to improve stream multiplexing
+relative to HTTP/2, by eliminating HoL (head of line) blocking that can occur in
+HTTP/2.  HoL blocking can happen because HTTP/2 streams are multiplexed onto a
+single TCP connection with its in-order semantics.  QUIC can maintain
+independence between streams because it implements core transport functionality
+in a fully stream-aware manner.  However, the HTTP over QUIC mapping is still
+subject HoL blocking if HPACK is used directly as in HTTP/2.  HPACK exploits
+multiplexing for greater compression, shrinking the representation of headers
+that have appeared earlier on the same connection.  In the context of QUIC, this
+imposes a vulnerability to HoL blocking as will be described more below.
 
-QUIC is described in {{QUIC-TRANSPORT}}.  The HTTP over QUIC mapping is decribed
-in {{QUIC-HTTP}}. For a full description of HTTP/2, see {{!RFC7540}}.  The
-description of HPACK is {{!RFC7541}}.
+QUIC is described in {{QUIC-TRANSPORT}}.  The HTTP over QUIC mapping is
+described in {{QUIC-HTTP}}. For a full description of HTTP/2, see {{!RFC7540}}.
+The description of HPACK is {{!RFC7541}}.
 
 # QPACK overview
 
@@ -164,7 +164,7 @@ Section 3.2 describes ho the epoch values are computed.
 
 As each header block is processed, HPACK is informed whether QPACK is enabled.
 If so, the encoder will emit an indexed representation only if it is not
-vulnerable to HoL blocking, that is if there is a matching entry in the dyamic
+vulnerable to HoL blocking, that is if there is a matching entry in the dynamic
 table such that: `entry.encode_epoch <= commit_epoch or entry.encode_epoch >=
 packet_epoch`.  Otherwise a literal must be used.
 
@@ -211,11 +211,11 @@ QPACK is set, and provides the commit, packet, and encoding epochs:
 * an encode epoch is considered acknowledged when all the bytes of the
   corresponding header block have been acknowledged.  The mapping layer keeps
   track of header blocks by their encode epochs, and monitors transport
-  acknolwedgments to determine `commit_epoch`, the highest in-order acknowledged
+  acknowledgments to determine `commit_epoch`, the highest in-order acknowledged
   encode epoch.  *This piggybacks on existing QUIC transport mechanisms, no
   additional wire format changes are needed.*
 
-* the mapping layer coordinates with packet writing to manange space available
+* the mapping layer coordinates with packet writing to manage space available
   for header blocks, and advances the packet epoch at packet boundaries.
   *Although sub-optimal, an simpler implementation could ignore packet
   boundaries and hold that: `packet_epoch == encode_epoch`.*
@@ -227,7 +227,7 @@ additional overhead of QPACK is the base index added to header blocks.  For a
 connection with fewer than 256 requests, the index would consume 1 byte per
 header block.
 
-It might be advantageous to allow implemenations to send header frames on
+It might be advantageous to allow implementations to send header frames on
 the HTTP control stream (QUIC stream 3).  Such headers would not be associated
 with any HTTP transaction, but could be used strategically to improve
 performance. For instance, as a means to avoid disabling QPACK because of table
@@ -254,7 +254,7 @@ TBD.
 
 This document currently makes no request of IANA, and might not need to.
 
-# Acknowledgements
+# Acknowledgments
 
 This draft draws heavily on the text of {{!RFC7541}}.  The indirect input of
 those authors is gratefully acknowledged, as well as ideas from:

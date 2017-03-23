@@ -301,7 +301,7 @@ address {
 
   <meta name="dct.creator" content="Krasic, C." />
   <meta name="dct.identifier" content="urn:ietf:id:draft-krasic-qpack-latest" />
-  <meta name="dct.issued" scheme="ISO8601" content="2017-3-22" />
+  <meta name="dct.issued" scheme="ISO8601" content="2017-3-23" />
   <meta name="dct.abstract" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is that provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
   <meta name="description" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is that provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
 
@@ -322,10 +322,10 @@ address {
 </tr>
 <tr>
   <td class="left">Intended status: Standards Track</td>
-  <td class="right">March 22, 2017</td>
+  <td class="right">March 23, 2017</td>
 </tr>
 <tr>
-  <td class="left">Expires: September 23, 2017</td>
+  <td class="left">Expires: September 24, 2017</td>
   <td class="right"></td>
 </tr>
 
@@ -346,7 +346,7 @@ address {
 <p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
 <p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at http://datatracker.ietf.org/drafts/current/.</p>
 <p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on September 23, 2017.</p>
+<p>This Internet-Draft will expire on September 24, 2017.</p>
 <h1 id="rfc.copyrightnotice">
   <a href="#rfc.copyrightnotice">Copyright Notice</a>
 </h1>
@@ -424,7 +424,7 @@ address {
 <h3 id="rfc.section.3.1.2"><a href="#rfc.section.3.1.2">3.1.2.</a> <a href="#indexing" id="indexing">Indexing</a></h3>
 <p id="rfc.section.3.1.2.p.1">Every QPACK header block must start with a single HPACK integer that encodes the value of the base index, defined as the total number of entries that had been inserted to the dynamic table before encoding the current header block.  As described above, the decoder will use this as the starting point for insertions, and for interpreting indexed representations.</p>
 <h3 id="rfc.section.3.1.3"><a href="#rfc.section.3.1.3">3.1.3.</a> <a href="#table-evictions" id="table-evictions">Table evictions</a></h3>
-<p id="rfc.section.3.1.3.p.1">Since QPACK allows headers to be processed out of order, it might be possible that an header block may contain references to entries that have already been evicted by the time it arrives.  For example, suppose HB was encoded after HA, and HB evicts an entry referenced by HA.  If due to network drops HB is decoded first, the reference in HA will become invalid.</p>
+<p id="rfc.section.3.1.3.p.1">Since QPACK allows headers to be processed out of order, it might be possible that a header block may contain references to entries that have been evicted by the time it arrives.  For example, suppose HB was encoded after HA, and HB evicts an entry referenced by HA.  If due to network drops HB is decoded first, the reference in HA will become invalid.</p>
 <p id="rfc.section.3.1.3.p.2">To handle this with minimal complexity, QPACK takes the following approach: if <samp>packet_epoch &gt; commit_epoch + 1</samp>, and if while encoding the current header block an eviction becomes necessary, then QPACK must be disabled for the current header block.  The first condition might be paraphrased as: are there any header block packets still in flight before the current one?</p>
 <p id="rfc.section.3.1.3.p.3">In the above example, HB would not be QPACK enabled, hence the decoder must ensure to process HB strictly after HA.</p>
 <p id="rfc.section.3.1.3.p.4">*Compared to other QUIC state such as receive buffers, the default table size of 4,096 octets (see <a href="#RFC7540">[RFC7540]</a> Section 6.5.2.) is very modest.  Deployment data suggests it is rarely increased in practice, and experiments to increase it did not yield significant gains.  Consequently, I think it&#8217;s best to avoid any heroic measures to deal with performance under full tables. *</p>

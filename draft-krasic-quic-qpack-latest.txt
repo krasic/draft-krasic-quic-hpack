@@ -4,8 +4,8 @@
 
 QUIC                                                           C. Krasic
 Internet-Draft                                                    Google
-Intended status: Standards Track                          March 22, 2017
-Expires: September 23, 2017
+Intended status: Standards Track                          March 23, 2017
+Expires: September 24, 2017
 
 
                  Header Compression for HTTP over QUIC
@@ -41,7 +41,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on September 23, 2017.
+   This Internet-Draft will expire on September 24, 2017.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Krasic                 Expires September 23, 2017               [Page 1]
+Krasic                 Expires September 24, 2017               [Page 1]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Krasic                 Expires September 23, 2017               [Page 2]
+Krasic                 Expires September 24, 2017               [Page 2]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -165,7 +165,7 @@ Internet-Draft                    HPACK                       March 2017
 
 
 
-Krasic                 Expires September 23, 2017               [Page 3]
+Krasic                 Expires September 24, 2017               [Page 3]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -221,7 +221,7 @@ Internet-Draft                    HPACK                       March 2017
 
 
 
-Krasic                 Expires September 23, 2017               [Page 4]
+Krasic                 Expires September 24, 2017               [Page 4]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -251,11 +251,11 @@ Internet-Draft                    HPACK                       March 2017
 3.1.3.  Table evictions
 
    Since QPACK allows headers to be processed out of order, it might be
-   possible that an header block may contain references to entries that
-   have already been evicted by the time it arrives.  For example,
-   suppose HB was encoded after HA, and HB evicts an entry referenced by
-   HA.  If due to network drops HB is decoded first, the reference in HA
-   will become invalid.
+   possible that a header block may contain references to entries that
+   have been evicted by the time it arrives.  For example, suppose HB
+   was encoded after HA, and HB evicts an entry referenced by HA.  If
+   due to network drops HB is decoded first, the reference in HA will
+   become invalid.
 
    To handle this with minimal complexity, QPACK takes the following
    approach: if "packet_epoch > commit_epoch + 1", and if while encoding
@@ -277,7 +277,7 @@ Internet-Draft                    HPACK                       March 2017
 
 
 
-Krasic                 Expires September 23, 2017               [Page 5]
+Krasic                 Expires September 24, 2017               [Page 5]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -333,7 +333,7 @@ Internet-Draft                    HPACK                       March 2017
 
 
 
-Krasic                 Expires September 23, 2017               [Page 6]
+Krasic                 Expires September 24, 2017               [Page 6]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -389,7 +389,7 @@ Internet-Draft                    HPACK                       March 2017
 
 
 
-Krasic                 Expires September 23, 2017               [Page 7]
+Krasic                 Expires September 24, 2017               [Page 7]
 
 Internet-Draft                    HPACK                       March 2017
 
@@ -445,4 +445,4 @@ Author's Address
 
 
 
-Krasic                 Expires September 23, 2017               [Page 8]
+Krasic                 Expires September 24, 2017               [Page 8]

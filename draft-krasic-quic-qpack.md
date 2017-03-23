@@ -188,7 +188,7 @@ To handle this with minimal complexity, QPACK takes the following approach: if
 `packet_epoch > commit_epoch + 1`, and if while encoding the current header
 block an eviction becomes necessary, then QPACK must be disabled for the current
 header block.  The first condition might be paraphrased as: are there any header
-block packets still in flight before the current one?  
+block packets still in flight before the current one?
 
 In the above example, HB would not be QPACK enabled, hence the decoder must
 ensure to process HB strictly after HA.

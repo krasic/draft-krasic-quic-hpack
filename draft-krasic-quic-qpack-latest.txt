@@ -258,10 +258,14 @@ Internet-Draft                    HPACK                       March 2017
    will become invalid.
 
    To handle this with minimal complexity, QPACK takes the following
-   approach: if while encoding the current header block, an eviction
-   becomes necessary, then QPACK must be disabled for the current header
-   block.  In the above example, HB could not be QPACK enabled, hence
-   decoding HB must wait for HA to be decoded first.
+   approach: if "packet_epoch > commit_epoch + 1", and if while encoding
+   the current header block an eviction becomes necessary, then QPACK
+   must be disabled for the current header block.  The first condition
+   might be paraphrased as: are there any header block packets still in
+   flight before the current one?
+
+   In the above example, HB would not be QPACK enabled, hence the
+   decoder must ensure to process HB strictly after HA.
 
    *Compared to other QUIC state such as receive buffers, the default
    table size of 4,096 octets (see [RFC7540] Section 6.5.2.) is very
@@ -269,10 +273,6 @@ Internet-Draft                    HPACK                       March 2017
    and experiments to increase it did not yield significant gains.
    Consequently, I think it's best to avoid any heroic measures to deal
    with performance under full tables. *
-
-
-
-
 
 
 
@@ -305,7 +305,7 @@ Internet-Draft                    HPACK                       March 2017
 
    o  the mapping layer coordinates with packet writing to manage space
       available for header blocks, and advances the packet epoch at
-      packet boundaries.  _Although sub-optimal, an simpler
+      packet boundaries.  _Although sub-optimal, a simpler
       implementation could ignore packet boundaries and hold that:
       ._"packet_epoch == encode_epoch"
 
@@ -324,12 +324,12 @@ Internet-Draft                    HPACK                       March 2017
    frequently used entries have the smallest indices.
 
    For QPACK header blocks, the base index is sufficient to decode
-   correctly.  If QPACK were made mandatory, and fallback to totally
-   ordered processing not eliminated from the design, then the sequence
-   number could be removed from the wire format.
-
-   Alternatively, if it were desirable to support a middle ground
-   between totally ordered HPACK and the present draft, one way might be
+   correctly.  If QPACK were made mandatory rather than optional, then
+   it would be feasible to remove sequence number from wire format of
+   "HEADERS" and "PUSH_PROMISE" frames, as well as the QPACK flag.
+   However, this would imply that once the table became full, insertions
+   could only occur during during periods with a single header block in
+   flight.
 
 
 
@@ -338,6 +338,8 @@ Krasic                 Expires September 23, 2017               [Page 6]
 Internet-Draft                    HPACK                       March 2017
 
 
+   Alternatively, if it were desirable to support a middle ground
+   between totally ordered HPACK and the present draft, one way might be
    to extend the concept of packet epoch to denote a sequence of one _or
    more_ packets.  A pair of new flags would be added to header frames
    to signal the start and end of such packet sequences.  The decoder
@@ -384,8 +386,6 @@ Internet-Draft                    HPACK                       March 2017
    [RFC7541]  Peon, R. and H. Ruellan, "HPACK: Header Compression for
               HTTP/2", RFC 7541, DOI 10.17487/RFC7541, May 2015,
               <http://www.rfc-editor.org/info/rfc7541>.
-
-
 
 
 

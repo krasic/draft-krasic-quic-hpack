@@ -181,14 +181,17 @@ and for interpreting indexed representations.
 Since QPACK allows headers to be processed out of order, it might be possible
 that an header block may contain references to entries that have already been
 evicted by the time it arrives.  For example, suppose HB was encoded after HA,
-and HB evicts an entry referenced by HA.   If due to network drops HB is decoded
+and HB evicts an entry referenced by HA.  If due to network drops HB is decoded
 first, the reference in HA will become invalid.
 
 To handle this with minimal complexity, QPACK takes the following approach: if
-while encoding the current header block, an eviction becomes necessary, then
-QPACK must be disabled for the current header block.  In the above example, HB
-could not be QPACK enabled, hence decoding HB must wait for HA to be decoded
-first.
+`packet_epoch > commit_epoch + 1`, and if while encoding the current header
+block an eviction becomes necessary, then QPACK must be disabled for the current
+header block.  The first condition might be paraphrased as: are there any header
+block packets still in flight before the current one?  
+
+In the above example, HB would not be QPACK enabled, hence the decoder must
+ensure to process HB strictly after HA.
 
 *Compared to other QUIC state such as receive buffers, the default table size of
 4,096 octets (see {{!RFC7540}} Section 6.5.2.) is very modest.  Deployment data
@@ -217,7 +220,7 @@ QPACK is set, and provides the commit, packet, and encoding epochs:
 
 * the mapping layer coordinates with packet writing to manage space available
   for header blocks, and advances the packet epoch at packet boundaries.
-  *Although sub-optimal, an simpler implementation could ignore packet
+  *Although sub-optimal, a simpler implementation could ignore packet
   boundaries and hold that: `packet_epoch == encode_epoch`.*
 
 # Performance considerations
@@ -234,9 +237,11 @@ performance. For instance, as a means to avoid disabling QPACK because of table
 eviction, or to ensure most frequently used entries have the smallest indices.
 
 For QPACK header blocks, the base index is sufficient to decode correctly.  If
-QPACK were made mandatory, and fallback to totally ordered processing not
-eliminated from the design, then the sequence number could be removed from the
-wire format.
+QPACK were made mandatory rather than optional, then it would be feasible to
+remove sequence number from wire format of `HEADERS` and `PUSH_PROMISE` frames,
+as well as the QPACK flag.  However, this would imply that once the table became
+full, insertions could only occur during during periods with a single header
+block in flight.
 
 Alternatively, if it were desirable to support a middle ground between totally
 ordered HPACK and the present draft, one way might be to extend the concept of

@@ -1,7 +1,7 @@
 ---
 title: Header Compression for HTTP over QUIC
 abbrev: HPACK
-docname: draft-krasic-qpack-latest
+docname: draft-krasic-qcram-latest
 date: {DATE}
 category: std
 ipr: trust200902
@@ -54,7 +54,7 @@ stream multiplexing free of HoL blocking between streams, while in HTTP/2
 multiplexed streams can suffer HoL blocking primarily due to HTTP/2's layering
 above TCP.  However, assuming HPACK is used for header compression, HTTP over
 QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header
-redundancies between multiplexed HTTP transactions.  This draft defines QPACK, a
+redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a
 variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC
 implementations the flexibility to avoid header-compression induced HoL
 blocking.
@@ -81,17 +81,18 @@ QUIC is described in {{QUIC-TRANSPORT}}.  The HTTP over QUIC mapping is
 described in {{QUIC-HTTP}}. For a full description of HTTP/2, see {{!RFC7540}}.
 The description of HPACK is {{!RFC7541}}.
 
-# QPACK overview
+# QCRAM overview
 
 Readers may wish to refer to {{!RFC7540}} Section 1.4 to review HPACK
 terminology, and {{QUIC-HTTP}}, Sections 4 on "HTTP over QUIC stream mapping"
 and 4.2.1 on "Header Compression".
 
-This draft extends HPACK and the HTTP over QUIC mapping with the *option* to
-avoid HoL blocking, in a backward compatible fashion.  QPACK strives to solve
-HoL blocking in the simplest way possible. To that end, the mechanisms QPACK
-defines are largely at the granularity of header blocks, as opposed to
-individual header field representations.
+This draft extends HPACK and the HTTP over QUIC mapping with the option to avoid
+HoL blocking.  QCRAM is intended to be a relatively non-intrusive extension to
+HPACK, an implementation should be easily shared within stacks supporting both
+HTTP/2 and HTTP over QUIC.  For full performance, QCRAM requires QUIC specific
+mechanisms that leverage tight integration between transport and HTTP layers, as
+will be described in Section 2.2.1.
 
 ## Example of HoL blocking
 
@@ -107,19 +108,53 @@ and `HB`. Stream `B` experiences HoL blocking due to `A` as follows:
 3. `HB`'s packet is delivered but `HA`'s is dropped.  HPACK can not decode `HB`
    until `HA`'s packet is successfully retransmitted.
 
-## How QPACK avoids HoL blocking
-Continuing the example, QPACK's approach is as follows.
+## How QCRAM avoids HoL blocking
+Continuing the example, QCRAM's approach is as follows.
 
 1. `HB[i]` can refer to `HA[j]` if `HA[j]` was delivered in a prior round trip.
 2. `HB[i]` can refer to `HA[j]` if `HA` and `HB` are to be delivered in the same
    packet.
-3. If QPACK is enabled, `HB[i]` will be represented using an HPACK literal.
+3. If QCRAM is enabled, `HB[i]` will be represented using an HPACK literal.
    Otherwise an indexed representation may be used, but HB must processed
    in-order, after HA.
 
 It is worth noting that rules 1. and 2. are situations where `HB` is not at risk
-of HoL blocking, even without QPACK.  Only in rule 3 does QPACK come into play
+of HoL blocking, even without QCRAM.  Only in rule 3 does QCRAM come into play
 giving the encoder the choice between HoL avoidance or better compression.
+
+### Header Blocks, Fragments, Frames, Packets...
+
+QCRAM strives to solve HoL blocking in the simplest way possible. To that end,
+the mechanisms QCRAM defines are largely at the granularity of header blocks, as
+opposed to individual header field representations.
+
+QCRAM header compression framing differs slightly from HTTP/2.
+Section 4.3 of {{!RFC7540}} declares that:
+
+> Header lists are collections of zero or more header fields.  When
+> transmitted over a connection, a header list is serialized into a
+> header block using HTTP header compression {{!RFC7541}}.  The
+> serialized header block is then divided into one or more octet
+> sequences, called header block fragments, and transmitted within the
+> payload of HEADERS (Section 6.2), PUSH_PROMISE (Section 6.6), or
+> CONTINUATION (Section 6.10) frames.
+
+As with other aspects of QUIC, QCRAM aims to leverage opportunities for tighter
+integration between layers, in ways that may not have been practical in HTTP/2
+due to various forms of ossification.  The two specific instance of this are
+coordination of framing with packet generation, as described in the following
+paragraph, and use of transport acknowledgments to reason about encoder-decoder
+state synchronization, which will be described in Section 3.2.
+
+QCRAM header compression SHOULD be progressive: compression of a Header List
+happens iteratively, where each iteration produces a single Header Block
+Fragment constrained to fit within the space available in the current transport
+packet.  *Each iteration informs the progressive HPACK encoder of available
+space and the encoder generates only as many HPACK representations as fit*.  The
+resulting header block fragment is encapsulated by an HTTP mapping headers frame
+(HEADERS or PUSH_PROMISE), and the headers frame will be encapsulated by a QUIC
+transport-level STREAM frame.  An implementation that can not support such
+coordination MUST forego references allowed by rule 2 of the previous section.
 
 ### Absolute Indexing
 
@@ -130,30 +165,30 @@ scheme, each insertion to the table causes the index of all existing entries to
 change (implicitly).  The approach is acceptable for HTTP/2 because TCP is
 totally ordered, but it is is problematic in the out-of-order context of QUIC.
 
-QPACK uses a hybrid absolute-relative indexing approach.  Every QPACK header
-block starts with an integer that conveys an absolute base index.  The format of
-individual indexed representations does not change, but their semantics become
-absolute in combination with the base index.  Similarly, the base index is used
-to perform table insertions at unambiguous positions.
+QCRAM uses a hybrid absolute-relative indexing approach.  Every QCRAM header
+block fragment starts with an integer that conveys an absolute base index.  The
+format of individual indexed representations does not change, but their
+semantics become absolute in combination with the base index.  Similarly, the
+base index is used to perform table insertions at unambiguous positions.
 
 # Changes to HPACK and HTTP over QUIC
 
-QPACK is optional on a per header block basis.  A QPACK enabled header block can
-be decoded on receipt, otherwise the header block should be processed in strict
+QCRAM is optional on a per header frame basis.  QCRAM enabled header frames can
+be decoded on receipt, otherwise the header frame should be processed in strict
 order as per Section 4.2.1 of the HTTP mapping.
 
 ## HPACK changes
 
-QPACK adds three integer *epochs* to HPACK state, all derived from the sequence
+QCRAM adds three integer *epochs* to HPACK state, all derived from the sequence
 numbers of HTTP Mapping (refer to {{QUIC-HTTP}} Sections 5.2.2 and 5.2.4.), and
 provided to the HPACK layer by the HTTP mapping:
 
-1. `encode_epoch`: the sequence number of the frame enclosing the header block,
-   as per the HTTP Mapping.  When entries are added to they dynamic table, the
-   current encode epoch is stored with the entry.
+1. `encode_epoch`: the sequence number of the header frame enclosing the header
+   block fragment, as per the HTTP Mapping.  When entries are added to they
+   dynamic table, the current encode epoch is stored with the entry.
 2. `packet_epoch`: the first encode epoch in the current QUIC packet.  When
-   multiple header blocks are packed into a single QUIC packet, the header
-   blocks should be ordered.
+   multiple header frames are packed into a single QUIC packet, they should be
+   ordered.
 3. `commit_epoch`: the highest in-order encode epoch acknowledged to the
    encoder side.
 
@@ -162,35 +197,35 @@ Section 3.2 describes ho the epoch values are computed.
 
 ### Indexed representations
 
-As each header block is processed, HPACK is informed whether QPACK is enabled.
-If so, the encoder will emit an indexed representation only if it is not
-vulnerable to HoL blocking, that is if there is a matching entry in the dynamic
-table such that: `entry.encode_epoch <= commit_epoch or entry.encode_epoch >=
-packet_epoch`.  Otherwise a literal must be used.
+As each header block fragment is processed, HPACK is informed whether QCRAM is
+enabled.  If so, the encoder will emit an indexed representation only if it is
+not vulnerable to HoL blocking, that is if there is a matching entry in the
+dynamic table such that: `entry.encode_epoch <= commit_epoch or
+entry.encode_epoch >= packet_epoch`.  Otherwise a literal must be used.
 
 ### Indexing
 
-Every QPACK header block must start with a single HPACK integer that encodes the
-value of the base index, defined as the total number of entries that had been
-inserted to the dynamic table before encoding the current header block.  As
-described above, the decoder will use this as the starting point for insertions,
-and for interpreting indexed representations.
+Every QCRAM header block fragment must start with a single HPACK integer that
+encodes the value of the base index, defined as the total number of entries that
+had been inserted to the dynamic table before encoding the current header block.
+As described above, the decoder will use this as the starting point for
+insertions, and for interpreting indexed representations.
 
 ### Table evictions
 
-Since QPACK allows headers to be processed out of order, it might be possible
-that a header block may contain references to entries that have been evicted by
-the time it arrives.  For example, suppose HB was encoded after HA, and HB
-evicts an entry referenced by HA.  If due to network drops HB is decoded first,
-the reference in HA will become invalid.
+Since QCRAM allows headers to be processed out of order, it might be possible
+that a header block fragment may contain references to entries that have been
+evicted by the time it arrives.  For example, suppose HB was encoded after HA,
+and HB evicts an entry referenced by HA.  If due to network drops HB is decoded
+first, the reference in HA will become invalid.
 
-To handle this with minimal complexity, QPACK takes the following approach: if
+To handle this with minimal complexity, QCRAM takes the following approach: if
 `packet_epoch > commit_epoch + 1`, and if while encoding the current header
-block an eviction becomes necessary, then QPACK must be disabled for the current
-header block.  The first condition might be paraphrased as: are there any header
-block packets still in flight before the current one?
+block fragment an eviction becomes necessary, then QCRAM must be disabled for
+the current header frame.  The first condition might be paraphrased as: are
+there any header block packets still in flight before the current one?
 
-In the above example, HB would not be QPACK enabled, hence the decoder must
+In the above example, HB would not be QCRAM enabled, hence the decoder must
 ensure to process HB strictly after HA.
 
 *Compared to other QUIC state such as receive buffers, the default table size of
@@ -204,42 +239,42 @@ heroic measures to deal with performance under full tables. *
 An additional flag is added to HEADERS and PUSH_PROMISE (refer to Sections
 5.2.1. and 5.2.4. of {{QUIC-HTTP}}):
 
-QPACK (0x8): This header block can be decoded upon receipt.
+QCRAM (0x8): This header block fragment can be decoded upon receipt.
 
 When encoding headers, the HTTP mapping layer notifies the HPACK layer whether
-QPACK is set, and provides the commit, packet, and encoding epochs:
+QCRAM is set, and provides the commit, packet, and encoding epochs:
 
-* the encoding epoch increments for every new header encoded.
+* the encoding epoch increments for every new header block fragment encoded.
 
 * an encode epoch is considered acknowledged when all the bytes of the
-  corresponding header block have been acknowledged.  The mapping layer keeps
-  track of header blocks by their encode epochs, and monitors transport
+  corresponding header frame have been acknowledged.  The mapping layer keeps
+  track of header frames by their encode epochs, and monitors transport
   acknowledgments to determine `commit_epoch`, the highest in-order acknowledged
   encode epoch.  *This piggybacks on existing QUIC transport mechanisms, no
   additional wire format changes are needed.*
 
 * the mapping layer coordinates with packet writing to manage space available
-  for header blocks, and advances the packet epoch at packet boundaries.
-  *Although sub-optimal, a simpler implementation could ignore packet
-  boundaries and hold that: `packet_epoch == encode_epoch`.*
+  for header frames, and advances the packet epoch at packet boundaries.
+  Implementations that forgo coordinated packetization MUST set `packet_epoch`
+  equal to `encode_epoch`.
 
 # Performance considerations
 
 Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4, the only
-additional overhead of QPACK is the base index added to header blocks.  For a
-connection with fewer than 256 requests, the index would consume 1 byte per
-header block.
+additional overhead of QCRAM is the base index added to header blocks.  For a
+typical connection with fewer than 256 requests, the index would consume
+approximately 1 byte per header block.
 
-It might be advantageous to allow implementations to send header frames on
-the HTTP control stream (QUIC stream 3).  Such headers would not be associated
-with any HTTP transaction, but could be used strategically to improve
-performance. For instance, as a means to avoid disabling QPACK because of table
+It might be advantageous to allow implementations to send header frames on the
+HTTP control stream (QUIC stream 3).  Such headers would not be associated with
+any HTTP transaction, but could be used strategically to improve
+performance. For instance, as a means to avoid disabling QCRAM due to table
 eviction, or to ensure most frequently used entries have the smallest indices.
 
-For QPACK header blocks, the base index is sufficient to decode correctly.  If
-QPACK were made mandatory rather than optional, then it would be feasible to
+For QCRAM header frames, the base index is sufficient to decode correctly.  If
+QCRAM were made mandatory rather than optional, then it would be feasible to
 remove sequence number from wire format of `HEADERS` and `PUSH_PROMISE` frames,
-as well as the QPACK flag.  However, this would imply that once the table became
+as well as the QCRAM flag.  However, this would imply that once the table became
 full, insertions could only occur during during periods with a single header
 block in flight.
 

@@ -49,10 +49,10 @@ normative:
 
 The design of the core QUIC transport and the mapping of HTTP semantics over it
 subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP
-header compression.  A key advantage of the QUIC transport is that provides
+header compression.  A key advantage of the QUIC transport is it provides
 stream multiplexing free of HoL blocking between streams, while in HTTP/2
 multiplexed streams can suffer HoL blocking primarily due to HTTP/2's layering
-above TCP. However, assuming HPACK is used for header compression, HTTP over
+above TCP. However if HPACK is used for header compression, HTTP over
 QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header
 redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a
 variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC
@@ -107,22 +107,20 @@ and `HB`. Stream `B` experiences HoL blocking due to `A` as follows:
 3. `HB`'s packet is delivered but `HA`'s is dropped.  HPACK can not decode `HB`
    until `HA`'s packet is successfully retransmitted.
 
-## How QCRAM avoids HoL blocking {#overview-hol-avoidance}
+## How QCRAM minimizes HoL blocking {#overview-hol-avoidance}
 Continuing the example, QCRAM's approach is as follows.
 
-1. `HB[i]` can refer to `HA[j]` if `HA[j]` was delivered in a prior round trip.
+1. `HB[i]` will not introduce HoL blocking if `HA[j]` was delivered in a prior
+   round trip.  To identify this case, QCRAM assumes that QUIC transport
+   surfaces acknowledgement notifications to the HTTP layer, and that the QCRAM
+   encoder can rely that acknowledged headers have been received by the decoder.
 
-2. Otherwise, HB might be vulnerable to HoL blocking due to HA: 
-    1. `HB[i]` may be represented with one of the Literal Incremental Indexing
-    variants (see {{RFC7541}} Section 6.2), trading lower compression ratio for
-    HoL resiliance.
-    2. `HB[i]` may be represented with an Indexed Representation.  This favors
+2. `HB[i]` may be represented with one of the Literal variants (see {{RFC7541}}
+    Section 6.2), trading lower compression ratio for HoL resiliance.
+    
+3. `HB[i]` may be represented with an Indexed Representation.  This favors
     compression ratio, but the decoder MUST ensure that HB is not decoded until
     after HA (see blocking in {{overview-absolute}})).
-
-To identify the first case, QCRAM assumes that QUIC transport surfaces
-acknowledgement notifications to the HTTP layer, and that the QCRAM encoder can
-rely that acknowledged headers have been received by the decoder.
 
 # HPACK extensions
 
@@ -163,13 +161,14 @@ QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in
 instructions at absolute postitions for indexed lookups and insertions. It is 
 also used for evictions ({{evictions}}).
 
-As was defined in {{overview-hol-avoidance}} case 2.2, the encoder has the
+As was defined in {{overview-hol-avoidance}} case 3, the encoder has the
 option to select indexed representations that are vulnerable to HoL blocking.
 Decoder processing of indexed header fields MUST block the encompassing header
-block if the referenced entry has not been added to the table yet.  To protect
-against buggy or malicious implementations, a timer should be used to set an
-upper bound on such blocking and in the event of a timeout SHOULD reset the
-stream with HTTP_HPACK_DECOMPRESSION_TIMEOUT.
+block if the referenced entry has not been added to the table yet.
+
+To protect against buggy or malicious implementations, a timer should be used to
+set an upper bound on such blocking and in the event of a timeout SHOULD reset
+the stream with HTTP_HPACK_DECOMPRESSION_TIMEOUT.
 
 ## Preventing Eviction Races {#evictions}
 Due to out of order arrival, QCRAM's eviction algorithm requires changes
@@ -199,7 +198,7 @@ encoder SHOULD use an Indexed-Duplicate representation instead (see
 
 ## Handling Stream Resets
 The QCRAM encoder has the option to select representations that might require
-blocking ({{overview-hol-avoidance}} case 2.2), but the decoder must be
+blocking ({{overview-hol-avoidance}} case 3), but the decoder must be
 prevented from becoming hung if the stream associated with the referenced entry
 is reset.  On stream reset, the QCRAM encoder MUST check if the stream has
 unacknowledged headers, and if so resend them on the Control Stream
@@ -256,7 +255,7 @@ mechanisms to de-duplicate strings.  A larger value than 32 might be more
 accurate for QCRAM.
 
 ## Co-ordinated Packetization 
-In {{overview-hol-avoidance}} case 2.2, an exception exists when the
+In {{overview-hol-avoidance}} case 3, an exception exists when the
 representation of `HA[i]` and `HB[j]` are delivered within the same transport
 packet.  If so, there is no risk of HoL blocking and using an indexed
 representation is strictly better than using a literal.  An implementation could

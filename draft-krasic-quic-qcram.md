@@ -166,9 +166,11 @@ option to select indexed representations that are vulnerable to HoL blocking.
 Decoder processing of indexed header fields MUST block the encompassing header
 block if the referenced entry has not been added to the table yet.
 
-To protect against buggy or malicious implementations, a timer should be used to
-set an upper bound on such blocking and in the event of a timeout SHOULD reset
-the stream with HTTP_HPACK_DECOMPRESSION_TIMEOUT.
+To protect against buggy or malicious peers, a timer should be used to
+set an upper bound on such blocking and in treat expiration of the
+timer as a decoding error.   However, if the implementation chooses not to abort 
+the connection, the remainder of the header block MUST be decoded and output 
+discarded.
 
 ## Preventing Eviction Races {#evictions}
 Due to out of order arrival, QCRAM's eviction algorithm requires changes
@@ -219,21 +221,19 @@ unambiguous indexing (see {{overview-absolute}}).
 
 *Indexed-Duplicates* are treated as an Indexed Header Field Represention (see
 {{!RFC7541}} Section 6.1), additionally inserting a new duplicate entry.
+{{RFC7541}} allows duplicate HPACK table entries, that is entries that have the
+same name and value.
 
 *Figure 2 annexes the representation for HPACK Dynamic Table Size Update (see
  Section 6.3 of RFC7541), which is not supported by HTTP over QUIC.*
 
 ### Manditory Entry De-duplication {#de-duplication}
 
-{{RFC7541}} allows duplicate HPACK table entries, that is entries that have the
-same name and value.  *Indexed-Duplicates* in QCRAM {{absolute-index}} might
-increase the occurence of duplicate entries, for example, in conjunction with
-the thresholding regime described in {{evictions}}. To help mitigate the
-performance impact of duplicate entries, HPACK for QCRAM is required to
-de-duplicate strings in the dynamic table. The table insertion logic should
-check if the new entry matches any existing entries (name and value), and if so,
-table accounting MUST charge only the overhead portion ({{!RFC7541}} Section
-4.1) to the new entry.
+To help mitigate memory consumption due to duplicate entries, HPACK for QCRAM is
+required to de-duplicate strings in the dynamic table. The table insertion logic
+should check if the new entry matches any existing entries (name and value), and
+if so, table accounting MUST charge only the overhead portion ({{!RFC7541}}
+Section 4.1) to the new entry.
 
 Specific de-duplication mechanisms are left to implementations, but using a map
 in conjunction with reference counted pointers to strings would be typical.

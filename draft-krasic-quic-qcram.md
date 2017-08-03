@@ -112,11 +112,11 @@ Continuing the example, QCRAM's approach is as follows.
 
 1. `HB[i]` will not introduce HoL blocking if `HA[j]` was delivered in a prior
    round trip.  To identify this case, QCRAM assumes that QUIC transport
-   surfaces acknowledgement notifications to the HTTP layer, and that the QCRAM
+   surfaces acknowledgment notifications to the HTTP layer, and that the QCRAM
    encoder can rely that acknowledged headers have been received by the decoder.
 
 2. `HB[i]` may be represented with one of the Literal variants (see {{RFC7541}}
-    Section 6.2), trading lower compression ratio for HoL resiliance.
+    Section 6.2), trading lower compression ratio for HoL resilience.
     
 3. `HB[i]` may be represented with an Indexed Representation.  This favors
     compression ratio, but the decoder MUST ensure that HB is not decoded until
@@ -158,7 +158,7 @@ is is problematic in the out-of-order context of QUIC.
 
 QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in
 {{absolute-index}} is used by the decoder to interpret all subsequent HPACK
-instructions at absolute postitions for indexed lookups and insertions. It is 
+instructions at absolute positions for indexed lookups and insertions. It is 
 also used for evictions ({{evictions}}).
 
 As was defined in {{overview-hol-avoidance}} case 3, the encoder has the
@@ -174,7 +174,7 @@ discarded.
 
 ## Preventing Eviction Races {#evictions}
 Due to out of order arrival, QCRAM's eviction algorithm requires changes
-(relative to HPACK) to avoid the possiblity that an indexed representation is
+(relative to HPACK) to avoid the possibility that an indexed representation is
 decoded after the referenced entry is already evicted.  QCRAM employs a
 two-phase eviction algorithm, in which the encoder will not evict entries that
 have outstanding (unacknowledged) references.  The QCRAM encoder maintains a
@@ -219,7 +219,7 @@ unambiguous indexing (see {{overview-absolute}}).
 ~~~~~~~~~~
 {:#fig-index-with-duplication title="Indexed Header Field with Duplication"}
 
-*Indexed-Duplicates* are treated as an Indexed Header Field Represention (see
+*Indexed-Duplicates* are treated as an Indexed Header Field Representation (see
 {{!RFC7541}} Section 6.1), additionally inserting a new duplicate entry.
 {{RFC7541}} allows duplicate HPACK table entries, that is entries that have the
 same name and value.
@@ -227,7 +227,7 @@ same name and value.
 *Figure 2 annexes the representation for HPACK Dynamic Table Size Update (see
  Section 6.3 of RFC7541), which is not supported by HTTP over QUIC.*
 
-### Manditory Entry De-duplication {#de-duplication}
+### Mandatory Entry De-duplication {#de-duplication}
 
 To help mitigate memory consumption due to duplicate entries, HPACK for QCRAM is
 required to de-duplicate strings in the dynamic table. The table insertion logic

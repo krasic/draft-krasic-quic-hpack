@@ -4,8 +4,8 @@
 
 QUIC                                                           C. Krasic
 Internet-Draft                                                    Google
-Intended status: Standards Track                       December 13, 2017
-Expires: June 16, 2018
+Intended status: Standards Track                       December 14, 2017
+Expires: June 17, 2018
 
 
                  Header Compression for HTTP over QUIC
@@ -41,7 +41,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on June 16, 2018.
+   This Internet-Draft will expire on June 17, 2018.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 1]
+Krasic                    Expires June 17, 2018                 [Page 1]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 2]
+Krasic                    Expires June 17, 2018                 [Page 2]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -165,7 +165,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 3]
+Krasic                    Expires June 17, 2018                 [Page 3]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -179,28 +179,28 @@ Internet-Draft                    QCRAM                    December 2017
 
    If HB contains no vulnerable header fields, BLOCKING MUST be 0.
 
-   If BLOCKING is set, then for each "HB[i]" that is vulnerable :
+   If BLOCKING is not set, then for each "HB[i]" that is vulnerable:
 
    1.  "HB[i]" is represented with one of the Literal variants (see
        [RFC7541] Section 6.2), trading lower compression ratio for HoL
        resilience.
 
-   If BLOCKING is not set then HB is encoded in blocking mode:
+   If BLOCKING is set then HB is encoded in blocking mode:
 
    1.  "HB[i]" is represented with an Indexed Representation.  This
        favors compression ratio.
 
    In blocking mode, after reading HB's prefix stream B might block.
    Stream B proceeds with reading and processing the rest of HB only
-   when all HB's dependencies are satisfied.  The header prefix contains
+   once all HB's dependencies are satisfied.  The header prefix contains
    table offset information that establishes total ordering among all
    headers, regardless of reordering in the transport (see Section 4.1).
    In blocking mode, the prefix additionally identifies the largest
    (absolute) index I that HB depends on (see "Depends" in
    Section Section 4.2).  HB's dependencies are satisfied when all
    entries less than or equal to I have been inserted into the table.
-   Notice that while blocked, HB's header field data remains in the
-   stream's flow control window.
+   Notice that while blocked, HB's header field data remains in stream
+   B's flow control window.
 
 3.  HTTP over QUIC mapping extensions
 
@@ -221,7 +221,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 4]
+Krasic                    Expires June 17, 2018                 [Page 4]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -277,7 +277,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 5]
+Krasic                    Expires June 17, 2018                 [Page 5]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -333,7 +333,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 6]
+Krasic                    Expires June 17, 2018                 [Page 6]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -389,7 +389,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 7]
+Krasic                    Expires June 17, 2018                 [Page 7]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -415,7 +415,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 5.3.  Co-ordinated Packetization
 
-   In Section 2.2 case 3, an exception exists when the representation of
+   In Section 2.2, an exception exists when the representation of
    "HA[i]" and "HB[j]" are delivered within the same transport packet.
    If so, there is no risk of HoL blocking and using an indexed
    representation is strictly better than using a literal.  An
@@ -445,7 +445,7 @@ Internet-Draft                    QCRAM                    December 2017
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 8]
+Krasic                    Expires June 17, 2018                 [Page 8]
 
 Internet-Draft                    QCRAM                    December 2017
 
@@ -501,4 +501,4 @@ Author's Address
 
 
 
-Krasic                    Expires June 16, 2018                 [Page 9]
+Krasic                    Expires June 17, 2018                 [Page 9]

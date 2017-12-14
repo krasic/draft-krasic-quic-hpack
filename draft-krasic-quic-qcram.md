@@ -121,26 +121,25 @@ PUSH_PROMISE frames (see {{hq-frames}}).
 
 If HB contains no vulnerable header fields, BLOCKING MUST be 0.  
 
-If BLOCKING is set, then for each `HB[i]` that is vulnerable :
+If BLOCKING is not set, then for each `HB[i]` that is vulnerable:
 
 2. `HB[i]` is represented with one of the Literal variants (see {{RFC7541}}
     Section 6.2), trading lower compression ratio for HoL resilience.
    
-If BLOCKING is
-not set then HB is encoded in blocking mode:
+If BLOCKING is set then HB is encoded in blocking mode:
 
 3. `HB[i]` is represented with an Indexed Representation.  This favors
     compression ratio.
 
 In blocking mode, after reading HB's prefix stream B might block.  Stream B
-proceeds with reading and processing the rest of HB only when all HB's
+proceeds with reading and processing the rest of HB only once all HB's
 dependencies are satisfied.  The header prefix contains table offset information
 that establishes total ordering among all headers, regardless of reordering in
 the transport (see {{absolute-index}}).  In blocking mode, the prefix
 additionally identifies the largest (absolute) index I that HB depends on (see
 `Depends` in Section {{overview-absolute}}).  HB's dependencies are satisfied
 when all entries less than or equal to I have been inserted into the table.
-Notice that while blocked, HB's header field data remains in the stream's flow
+Notice that while blocked, HB's header field data remains in stream B's flow
 control window.
 
 # HTTP over QUIC mapping extensions {#hq-frames}
@@ -306,12 +305,12 @@ and requires mechanisms to de-duplicate strings.  A larger value than 32 might
 be more accurate for QCRAM.
 
 ## Co-ordinated Packetization 
-In {{overview-hol-avoidance}} case 3, an exception exists when the
-representation of `HA[i]` and `HB[j]` are delivered within the same transport
-packet.  If so, there is no risk of HoL blocking and using an indexed
-representation is strictly better than using a literal.  An implementation could
-exploit this exception by employing co-ordination between QCRAM
-compression and QUIC transport packetization.
+In {{overview-hol-avoidance}}, an exception exists when the representation of
+`HA[i]` and `HB[j]` are delivered within the same transport packet.  If so,
+there is no risk of HoL blocking and using an indexed representation is strictly
+better than using a literal.  An implementation could exploit this exception by
+employing co-ordination between QCRAM compression and QUIC transport
+packetization.
 
 # Security Considerations
 

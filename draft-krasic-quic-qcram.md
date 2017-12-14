@@ -1,7 +1,7 @@
 ---
 title: Header Compression for HTTP over QUIC
 abbrev: QCRAM
-docname: draft-krasic-quic-qcram-02
+docname: draft-krasic-quic-qcram-03
 date: {DATE}
 category: std
 ipr: trust200902
@@ -110,27 +110,65 @@ and `HB`. Stream `B` experiences HoL blocking due to `A` as follows:
 ## How QCRAM minimizes HoL blocking {#overview-hol-avoidance}
 Continuing the example, QCRAM's approach is as follows.
 
-1. `HB[i]` will not introduce HoL blocking if `HA[j]` was delivered in a prior
-   round trip.  To identify this case, QCRAM assumes that QUIC transport
-   surfaces acknowledgment notifications to the HTTP layer, and that the QCRAM
-   encoder can rely that acknowledged headers have been received by the decoder.
+1. `HB[i]` will not introduce HoL blocking if `HA` has been acknowledged,
+   otherwise it is vulnerable.  A new HQ frame type HEADERS_ACK is defined (see
+   {{hq-frames}}).  When the decoder has processed a header block, HEADERS_ACK
+   is sent from the decoder back to the encoder.
 
-2. `HB[i]` may be represented with one of the Literal variants (see {{RFC7541}}
+The encoder can choose on a per header block basis whether to favor higher
+compression ratio or HoL resilience, signaled by the BLOCKING flag in HEADERS and
+PUSH_PROMISE frames (see {{hq-frames}}).  
+
+If HB contains no vulnerable header fields, BLOCKING MUST be 0.  
+
+If BLOCKING is set, then for each `HB[i]` that is vulnerable :
+
+2. `HB[i]` is represented with one of the Literal variants (see {{RFC7541}}
     Section 6.2), trading lower compression ratio for HoL resilience.
-    
-3. `HB[i]` may be represented with an Indexed Representation.  This favors
-    compression ratio, but the decoder MUST ensure that HB is not decoded until
-    after HA (see blocking in {{overview-absolute}})).
+   
+If BLOCKING is
+not set then HB is encoded in blocking mode:
+
+3. `HB[i]` is represented with an Indexed Representation.  This favors
+    compression ratio.
+
+In blocking mode, after reading HB's prefix stream B might block.  Stream B
+proceeds with reading and processing the rest of HB only when all HB's
+dependencies are satisfied.  The header prefix contains table offset information
+that establishes total ordering among all headers, regardless of reordering in
+the transport (see {{absolute-index}}).  In blocking mode, the prefix
+additionally identifies the largest (absolute) index I that HB depends on (see
+`Depends` in Section {{overview-absolute}}).  HB's dependencies are satisfied
+when all entries less than or equal to I have been inserted into the table.
+Notice that while blocked, HB's header field data remains in the stream's flow
+control window.
+
+# HTTP over QUIC mapping extensions {#hq-frames}
+
+## HEADERS and PUSH_PROMISE
+
+HEADER and PUSH_PROMISE frames define a new flag BLOCKING (0x01): Indicates the
+stream might need to wait for dependent headers before processing.  If 0, the
+header can always be processed immediately upon receipt.
+
+## HEADER_ACK
+
+The HEADER_ACK frame (type=0x8) is sent by the decoder side to the encoder when
+a the decoder has fully processed a header block.  It is used by the encoder to
+determine whether subsequent indexed representations that might reference that
+block are vulnerable to HoL blocking.  The HEADER_ACK frame does not define any
+flags, and has no payload.
 
 # HPACK extensions
 
 ## Header Block Prefix {#absolute-index}
 
-In HEADERS and PUSH_PROMISE frames, HPACK Header data should be prefixed by a
-pair of integers: `Fill` and the `Evictions`. `Fill` is the number of entries in
-the table, and `Evictions` is the cumulative number entries that have been
-evicted from the table.  Their sum is the cumulative number of entries inserted.
-Each is encoded as a single HPACK integer (8-bit prefix):
+In HEADERS and PUSH_PROMISE frames, HPACK Header data are prefixed by a pair of
+integers pair of integers: `Fill` and the `Evictions`. `Fill` is the number of
+entries in the table, and `Evictions` is the cumulative number entries that have
+been evicted from the table.  Their sum is the cumulative number of entries
+inserted before the following header block was encoded.  Each is encoded as a
+single HPACK integer (8-bit prefix):
 
 ~~~~~~~~~~  drawing
     0 1 2 3 4 5 6 7 
@@ -140,10 +178,30 @@ Each is encoded as a single HPACK integer (8-bit prefix):
    |Evictions  (8+)|
    +---------------+
 ~~~~~~~~~~
-{:#fig-base-index title="Absolute indexing"}
+{:#fig-base-index title="Absolute indexing (BLOCKING=0x0)"}
 
 {{overview-absolute}} describes the role of `Fill` and {{evictions}} covers the
 role of `Evictions`.
+
+When BLOCKING flag is 0x1, a the prefix additionally contains a third HPACK
+integer (8-bit prefix) 'Depends':
+
+~~~~~~~~~~  drawing
+    0 1 2 3 4 5 6 7 
+   +-+-+-+-+-+-+-+-+
+   |Fill       (8+)|
+   +---------------+
+   |Evictions  (8+)|
+   +---------------+
+   |Depends    (8+)|
+   +---------------+
+~~~~~~~~~~
+{:#fig-prefix-long title="Absolute indexing (BLOCKING=0x1)"}
+
+Depends is used to identify header dependencies, namely the largest table entry
+referred to by (indexed representations within) the following header block, its usage
+is described in {{overview-hol-avoidance}}.  The largest entry index is
+`Evictions + Fill - Depends`.
 
 ## Hybrid absolute-relative indexing {#overview-absolute}
 
@@ -158,19 +216,12 @@ is is problematic in the out-of-order context of QUIC.
 
 QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in
 {{absolute-index}} is used by the decoder to interpret all subsequent HPACK
-instructions at absolute positions for indexed lookups and insertions. It is 
-also used for evictions ({{evictions}}).
+instructions at absolute positions for indexed lookups and insertions. 
 
-As was defined in {{overview-hol-avoidance}} case 3, the encoder has the
-option to select indexed representations that are vulnerable to HoL blocking.
-Decoder processing of indexed header fields MUST block the encompassing header
-block if the referenced entry has not been added to the table yet.
-
-To protect against buggy or malicious peers, a timer should be used to
-set an upper bound on such blocking and in treat expiration of the
-timer as a decoding error.   However, if the implementation chooses not to abort 
-the connection, the remainder of the header block MUST be decoded and output 
-discarded.
+Since QCRAM handles blocking at the stream level, it is an error if the HPACK
+decoder encounters an indexed representation that refers to an entry missing
+from the table, and the connection MUST be closed with the
+`HTTP_HPACK_DECOMPRESSION_FAILED` error code.
 
 ## Preventing Eviction Races {#evictions}
 Due to out of order arrival, QCRAM's eviction algorithm requires changes
@@ -250,9 +301,9 @@ and hence minimal size on the wire.
 
 ## Fixed overhead.
 HPACK defines overhead as 32 bytes ({{!RFC7541}} Section 4.1).  QCRAM adds some
-per-entry state, to track acknowledgment status and eviction rank, and requires
-mechanisms to de-duplicate strings.  A larger value than 32 might be more
-accurate for QCRAM.
+per-entry state, to track acknowledgment status and eviction reference count,
+and requires mechanisms to de-duplicate strings.  A larger value than 32 might
+be more accurate for QCRAM.
 
 ## Co-ordinated Packetization 
 In {{overview-hol-avoidance}} case 3, an exception exists when the

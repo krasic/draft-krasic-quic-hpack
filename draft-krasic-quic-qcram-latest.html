@@ -280,20 +280,26 @@ address {
 <link href="#rfc.section.1" rel="Chapter" title="1 Introduction"/>
 <link href="#rfc.section.2" rel="Chapter" title="2 QCRAM overview"/>
 <link href="#rfc.section.2.1" rel="Chapter" title="2.1 Example of HoL blocking"/>
-<link href="#rfc.section.2.2" rel="Chapter" title="2.2 How QCRAM avoids HoL blocking"/>
-<link href="#rfc.section.2.2.1" rel="Chapter" title="2.2.1 Header Blocks, Fragments, Frames, Packets&#x2026;"/>
-<link href="#rfc.section.2.2.2" rel="Chapter" title="2.2.2 Absolute Indexing"/>
-<link href="#rfc.section.3" rel="Chapter" title="3 Changes to HPACK and HTTP over QUIC"/>
-<link href="#rfc.section.3.1" rel="Chapter" title="3.1 HPACK changes"/>
-<link href="#rfc.section.3.1.1" rel="Chapter" title="3.1.1 Indexed representations"/>
-<link href="#rfc.section.3.1.2" rel="Chapter" title="3.1.2 Indexing"/>
-<link href="#rfc.section.3.1.3" rel="Chapter" title="3.1.3 Table evictions"/>
-<link href="#rfc.section.3.2" rel="Chapter" title="3.2 HTTP Mapping changes"/>
-<link href="#rfc.section.4" rel="Chapter" title="4 Performance considerations"/>
-<link href="#rfc.section.5" rel="Chapter" title="5 Security Considerations"/>
-<link href="#rfc.section.6" rel="Chapter" title="6 IANA Considerations"/>
-<link href="#rfc.section.7" rel="Chapter" title="7 Acknowledgments"/>
-<link href="#rfc.references" rel="Chapter" title="8 Normative References"/>
+<link href="#rfc.section.2.2" rel="Chapter" title="2.2 How QCRAM minimizes HoL blocking"/>
+<link href="#rfc.section.3" rel="Chapter" title="3 HTTP over QUIC mapping extensions"/>
+<link href="#rfc.section.3.1" rel="Chapter" title="3.1 HEADERS and PUSH_PROMISE"/>
+<link href="#rfc.section.3.2" rel="Chapter" title="3.2 HEADER_ACK"/>
+<link href="#rfc.section.4" rel="Chapter" title="4 HPACK extensions"/>
+<link href="#rfc.section.4.1" rel="Chapter" title="4.1 Header Block Prefix"/>
+<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Hybrid absolute-relative indexing"/>
+<link href="#rfc.section.4.3" rel="Chapter" title="4.3 Preventing Eviction Races"/>
+<link href="#rfc.section.4.3.1" rel="Chapter" title="4.3.1 Blocked Evictions"/>
+<link href="#rfc.section.4.4" rel="Chapter" title="4.4 Handling Stream Resets"/>
+<link href="#rfc.section.4.5" rel="Chapter" title="4.5 Refreshing Entries with Duplication"/>
+<link href="#rfc.section.4.5.1" rel="Chapter" title="4.5.1 Mandatory Entry De-duplication"/>
+<link href="#rfc.section.5" rel="Chapter" title="5 Performance considerations"/>
+<link href="#rfc.section.5.1" rel="Chapter" title="5.1 Speculative table updates"/>
+<link href="#rfc.section.5.2" rel="Chapter" title="5.2 Fixed overhead."/>
+<link href="#rfc.section.5.3" rel="Chapter" title="5.3 Co-ordinated Packetization"/>
+<link href="#rfc.section.6" rel="Chapter" title="6 Security Considerations"/>
+<link href="#rfc.section.7" rel="Chapter" title="7 IANA Considerations"/>
+<link href="#rfc.section.8" rel="Chapter" title="8 Acknowledgments"/>
+<link href="#rfc.references" rel="Chapter" title="9 Normative References"/>
 <link href="#rfc.authors" rel="Chapter"/>
 
 
@@ -301,10 +307,10 @@ address {
   <link rel="schema.dct" href="http://purl.org/dc/terms/" />
 
   <meta name="dct.creator" content="Krasic, C." />
-  <meta name="dct.identifier" content="urn:ietf:id:draft-krasic-qcram-latest" />
-  <meta name="dct.issued" scheme="ISO8601" content="2017-3-27" />
-  <meta name="dct.abstract" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is that provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
-  <meta name="description" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is that provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
+  <meta name="dct.identifier" content="urn:ietf:id:draft-krasic-quic-qcram-03" />
+  <meta name="dct.issued" scheme="ISO8601" content="2017-12-13" />
+  <meta name="dct.abstract" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is it provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP. However if HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
+  <meta name="description" content="The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is it provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP. However if HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking." />
 
 </head>
 
@@ -323,10 +329,10 @@ address {
 </tr>
 <tr>
   <td class="left">Intended status: Standards Track</td>
-  <td class="right">March 27, 2017</td>
+  <td class="right">December 13, 2017</td>
 </tr>
 <tr>
-  <td class="left">Expires: September 28, 2017</td>
+  <td class="left">Expires: June 16, 2018</td>
   <td class="right"></td>
 </tr>
 
@@ -335,19 +341,19 @@ address {
   </table>
 
   <p class="title">Header Compression for HTTP over QUIC<br />
-  <span class="filename">draft-krasic-qcram-latest</span></p>
+  <span class="filename">draft-krasic-quic-qcram-03</span></p>
   
   <h1 id="rfc.abstract">
   <a href="#rfc.abstract">Abstract</a>
 </h1>
-<p>The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is that provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP.  However, assuming HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking.</p>
+<p>The design of the core QUIC transport and the mapping of HTTP semantics over it subsume many HTTP/2 features, prominent among them stream multiplexing and HTTP header compression.  A key advantage of the QUIC transport is it provides stream multiplexing free of HoL blocking between streams, while in HTTP/2 multiplexed streams can suffer HoL blocking primarily due to HTTP/2&#8217;s layering above TCP. However if HPACK is used for header compression, HTTP over QUIC is still vulnerable to HoL blocking, because of how HPACK exploits header redundancies between multiplexed HTTP transactions.  This draft defines QCRAM, a variation of HPACK and mechanisms in the QUIC HTTP mapping that allow QUIC implementations the flexibility to avoid header-compression induced HoL blocking.</p>
 <h1 id="rfc.status">
   <a href="#rfc.status">Status of This Memo</a>
 </h1>
 <p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
 <p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at http://datatracker.ietf.org/drafts/current/.</p>
 <p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on September 28, 2017.</p>
+<p>This Internet-Draft will expire on June 16, 2018.</p>
 <h1 id="rfc.copyrightnotice">
   <a href="#rfc.copyrightnotice">Copyright Notice</a>
 </h1>
@@ -362,33 +368,39 @@ address {
   	<li>1.   <a href="#rfc.section.1">Introduction</a></li>
 <li>2.   <a href="#rfc.section.2">QCRAM overview</a></li>
 <ul><li>2.1.   <a href="#rfc.section.2.1">Example of HoL blocking</a></li>
-<li>2.2.   <a href="#rfc.section.2.2">How QCRAM avoids HoL blocking</a></li>
-<ul><li>2.2.1.   <a href="#rfc.section.2.2.1">Header Blocks, Fragments, Frames, Packets&#8230;</a></li>
-<li>2.2.2.   <a href="#rfc.section.2.2.2">Absolute Indexing</a></li>
-</ul></ul><li>3.   <a href="#rfc.section.3">Changes to HPACK and HTTP over QUIC</a></li>
-<ul><li>3.1.   <a href="#rfc.section.3.1">HPACK changes</a></li>
-<ul><li>3.1.1.   <a href="#rfc.section.3.1.1">Indexed representations</a></li>
-<li>3.1.2.   <a href="#rfc.section.3.1.2">Indexing</a></li>
-<li>3.1.3.   <a href="#rfc.section.3.1.3">Table evictions</a></li>
-</ul><li>3.2.   <a href="#rfc.section.3.2">HTTP Mapping changes</a></li>
-</ul><li>4.   <a href="#rfc.section.4">Performance considerations</a></li>
-<li>5.   <a href="#rfc.section.5">Security Considerations</a></li>
-<li>6.   <a href="#rfc.section.6">IANA Considerations</a></li>
-<li>7.   <a href="#rfc.section.7">Acknowledgments</a></li>
-<li>8.   <a href="#rfc.references">Normative References</a></li>
+<li>2.2.   <a href="#rfc.section.2.2">How QCRAM minimizes HoL blocking</a></li>
+</ul><li>3.   <a href="#rfc.section.3">HTTP over QUIC mapping extensions</a></li>
+<ul><li>3.1.   <a href="#rfc.section.3.1">HEADERS and PUSH_PROMISE</a></li>
+<li>3.2.   <a href="#rfc.section.3.2">HEADER_ACK</a></li>
+</ul><li>4.   <a href="#rfc.section.4">HPACK extensions</a></li>
+<ul><li>4.1.   <a href="#rfc.section.4.1">Header Block Prefix</a></li>
+<li>4.2.   <a href="#rfc.section.4.2">Hybrid absolute-relative indexing</a></li>
+<li>4.3.   <a href="#rfc.section.4.3">Preventing Eviction Races</a></li>
+<ul><li>4.3.1.   <a href="#rfc.section.4.3.1">Blocked Evictions</a></li>
+</ul><li>4.4.   <a href="#rfc.section.4.4">Handling Stream Resets</a></li>
+<li>4.5.   <a href="#rfc.section.4.5">Refreshing Entries with Duplication</a></li>
+<ul><li>4.5.1.   <a href="#rfc.section.4.5.1">Mandatory Entry De-duplication</a></li>
+</ul></ul><li>5.   <a href="#rfc.section.5">Performance considerations</a></li>
+<ul><li>5.1.   <a href="#rfc.section.5.1">Speculative table updates</a></li>
+<li>5.2.   <a href="#rfc.section.5.2">Fixed overhead.</a></li>
+<li>5.3.   <a href="#rfc.section.5.3">Co-ordinated Packetization</a></li>
+</ul><li>6.   <a href="#rfc.section.6">Security Considerations</a></li>
+<li>7.   <a href="#rfc.section.7">IANA Considerations</a></li>
+<li>8.   <a href="#rfc.section.8">Acknowledgments</a></li>
+<li>9.   <a href="#rfc.references">Normative References</a></li>
 <li><a href="#rfc.authors">Author's Address</a></li>
 
 
   </ul>
 
   <h1 id="rfc.section.1"><a href="#rfc.section.1">1.</a> <a href="#introduction" id="introduction">Introduction</a></h1>
-<p id="rfc.section.1.p.1">The QUIC transport protocol was designed from the outset to support HTTP semantics, and its design subsumes most of the features of HTTP/2.  Two of those features, stream multiplexing and header compression come into some conflict in QUIC.  A key goal of the design of QUIC is to improve stream multiplexing relative to HTTP/2, by eliminating HoL (head of line) blocking that can occur in HTTP/2.  HoL blocking can happen because HTTP/2 streams are multiplexed onto a single TCP connection with its in-order semantics.  QUIC can maintain independence between streams because it implements core transport functionality in a fully stream-aware manner.  However, the HTTP over QUIC mapping is still subject HoL blocking if HPACK is used directly as in HTTP/2.  HPACK exploits multiplexing for greater compression, shrinking the representation of headers that have appeared earlier on the same connection.  In the context of QUIC, this imposes a vulnerability to HoL blocking as will be described more below.</p>
+<p id="rfc.section.1.p.1">The QUIC transport protocol was designed from the outset to support HTTP semantics, and its design subsumes most of the features of HTTP/2.  Two of those features, stream multiplexing and header compression come into some conflict in QUIC.  A key goal of the design of QUIC is to improve stream multiplexing relative to HTTP/2, by eliminating HoL (head of line) blocking that can occur in HTTP/2.  HoL blocking can happen because HTTP/2 streams are multiplexed onto a single TCP connection with its in-order semantics.  QUIC can maintain independence between streams because it implements core transport functionality in a fully stream-aware manner.  However, the HTTP over QUIC mapping is still subject to HoL blocking if HPACK is used directly as in HTTP/2.  HPACK exploits multiplexing for greater compression, shrinking the representation of headers that have appeared earlier on the same connection.  In the context of QUIC, this imposes a vulnerability to HoL blocking as will be described more below (<a href="#hol-example">Section 2.1</a>).</p>
 <p id="rfc.section.1.p.2">QUIC is described in <a href="#QUIC-TRANSPORT">[QUIC-TRANSPORT]</a>.  The HTTP over QUIC mapping is described in <a href="#QUIC-HTTP">[QUIC-HTTP]</a>. For a full description of HTTP/2, see <a href="#RFC7540">[RFC7540]</a>.  The description of HPACK is <a href="#RFC7541">[RFC7541]</a>.</p>
 <h1 id="rfc.section.2"><a href="#rfc.section.2">2.</a> <a href="#qcram-overview" id="qcram-overview">QCRAM overview</a></h1>
-<p id="rfc.section.2.p.1">Readers may wish to refer to <a href="#RFC7540">[RFC7540]</a> Section 1.4 to review HPACK terminology, and <a href="#QUIC-HTTP">[QUIC-HTTP]</a>, Sections 4 on &#8220;HTTP over QUIC stream mapping&#8221; and 4.2.1 on &#8220;Header Compression&#8221;.</p>
-<p id="rfc.section.2.p.2">This draft extends HPACK and the HTTP over QUIC mapping with the option to avoid HoL blocking.  QCRAM is intended to be a relatively non-intrusive extension to HPACK, an implementation should be easily shared within stacks supporting both HTTP/2 and HTTP over QUIC.  For full performance, QCRAM requires QUIC specific mechanisms that leverage tight integration between transport and HTTP layers, as will be described in Section 2.2.1.</p>
-<h2 id="rfc.section.2.1"><a href="#rfc.section.2.1">2.1.</a> <a href="#example-of-hol-blocking" id="example-of-hol-blocking">Example of HoL blocking</a></h2>
-<p id="rfc.section.2.1.p.1">The following is an example of how HPACK can induce HoL blocking in QUIC. Assume two message control streams <samp>A</samp> and <samp>B</samp>, and corresponding header blocks <samp>HA</samp> and <samp>HB</samp>. Stream <samp>B</samp> experiences HoL blocking due to <samp>A</samp> as follows:</p>
+<p id="rfc.section.2.p.1">Readers may wish to refer to <a href="#RFC7541">[RFC7541]</a> Section 1.3 to review HPACK terminology, and <a href="#QUIC-HTTP">[QUIC-HTTP]</a>, Sections 4 on &#8220;HTTP over QUIC stream mapping&#8221; and 4.2.1 on &#8220;Header Compression&#8221;.  QCRAM extensions to HPACK allow correctness in the presence of out-of-order delivery, with flexibility to balance between resilience against HoL blocking and compression ratio.</p>
+<p id="rfc.section.2.p.2">QCRAM is intended to be a relatively non-intrusive extension to HPACK, an implementation should be easily shared within stacks supporting both HTTP/2 over (TLS+)TCP and HTTP over QUIC.</p>
+<h2 id="rfc.section.2.1"><a href="#rfc.section.2.1">2.1.</a> <a href="#hol-example" id="hol-example">Example of HoL blocking</a></h2>
+<p id="rfc.section.2.1.p.1">The following is an example of how HPACK can induce HoL blocking in QUIC. Assume two HTTP message exchange streams <samp>A</samp> and <samp>B</samp>, and corresponding header blocks <samp>HA</samp> and <samp>HB</samp>. Stream <samp>B</samp> experiences HoL blocking due to <samp>A</samp> as follows:</p>
 <p/>
 
 <ol>
@@ -396,93 +408,127 @@ address {
   <li><samp>HA</samp> and <samp>HB</samp> are delivered via distinct packets that are inflight in the same round trip.</li>
   <li><samp>HB</samp>&#8217;s packet is delivered but <samp>HA</samp>&#8217;s is dropped.  HPACK can not decode <samp>HB</samp> until <samp>HA</samp>&#8217;s packet is successfully retransmitted.</li>
 </ol>
-<h2 id="rfc.section.2.2"><a href="#rfc.section.2.2">2.2.</a> <a href="#how-qcram-avoids-hol-blocking" id="how-qcram-avoids-hol-blocking">How QCRAM avoids HoL blocking</a></h2>
+<h2 id="rfc.section.2.2"><a href="#rfc.section.2.2">2.2.</a> <a href="#overview-hol-avoidance" id="overview-hol-avoidance">How QCRAM minimizes HoL blocking</a></h2>
 <p id="rfc.section.2.2.p.1">Continuing the example, QCRAM&#8217;s approach is as follows.</p>
 <p/>
 
 <ol>
-  <li><samp>HB[i]</samp> can refer to <samp>HA[j]</samp> if <samp>HA[j]</samp> was delivered in a prior round trip.</li>
-  <li><samp>HB[i]</samp> can refer to <samp>HA[j]</samp> if <samp>HA</samp> and <samp>HB</samp> are to be delivered in the same packet.</li>
-  <li>If QCRAM is enabled, <samp>HB[i]</samp> will be represented using an HPACK literal.  Otherwise an indexed representation may be used, but HB must processed in-order, after HA.</li>
+  <li><samp>HB[i]</samp> will not introduce HoL blocking if <samp>HA</samp> has been acknowledged, otherwise it is vulnerable.  A new HQ frame type HEADERS_ACK is defined (see <a href="#hq-frames">Section 3</a>).  When the decoder has processed a header block, HEADERS_ACK is sent from the decoder back to the encoder.</li>
 </ol>
-<p id="rfc.section.2.2.p.3">It is worth noting that rules 1. and 2. are situations where <samp>HB</samp> is not at risk of HoL blocking, even without QCRAM.  Only in rule 3 does QCRAM come into play giving the encoder the choice between HoL avoidance or better compression.</p>
-<h3 id="rfc.section.2.2.1"><a href="#rfc.section.2.2.1">2.2.1.</a> <a href="#header-blocks-fragments-frames-packets" id="header-blocks-fragments-frames-packets">Header Blocks, Fragments, Frames, Packets&#8230;</a></h3>
-<p id="rfc.section.2.2.1.p.1">QCRAM strives to solve HoL blocking in the simplest way possible. To that end, the mechanisms QCRAM defines are largely at the granularity of header blocks, as opposed to individual header field representations.</p>
-<p id="rfc.section.2.2.1.p.2">QCRAM header compression framing differs slightly from HTTP/2.  Section 4.3 of <a href="#RFC7540">[RFC7540]</a> declares that:</p>
-<p/>
-
-<ul class="empty">
-  <li>Header lists are collections of zero or more header fields.  When transmitted over a connection, a header list is serialized into a header block using HTTP header compression <a href="#RFC7541">[RFC7541]</a>.  The serialized header block is then divided into one or more octet sequences, called header block fragments, and transmitted within the payload of HEADERS (Section 6.2), PUSH_PROMISE (Section 6.6), or CONTINUATION (Section 6.10) frames.</li>
-</ul>
-<p id="rfc.section.2.2.1.p.4">As with other aspects of QUIC, QCRAM aims to leverage opportunities for tighter integration between layers, in ways that may not have been practical in HTTP/2 due to various forms of ossification.  The two specific instance of this are coordination of framing with packet generation, as described in the following paragraph, and use of transport acknowledgments to reason about encoder-decoder state synchronization, which will be described in Section 3.2.</p>
-<p id="rfc.section.2.2.1.p.5">QCRAM header compression SHOULD be progressive: compression of a Header List happens iteratively, where each iteration produces a single Header Block Fragment constrained to fit within the space available in the current transport packet.  <em>Each iteration informs the progressive HPACK encoder of available space and the encoder generates only as many HPACK representations as fit</em>.  The resulting header block fragment is encapsulated by an HTTP mapping headers frame (HEADERS or PUSH_PROMISE), and the headers frame will be encapsulated by a QUIC transport-level STREAM frame.  An implementation that can not support such coordination MUST forego references allowed by rule 2 of the previous section.</p>
-<h3 id="rfc.section.2.2.2"><a href="#rfc.section.2.2.2">2.2.2.</a> <a href="#absolute-indexing" id="absolute-indexing">Absolute Indexing</a></h3>
-<p id="rfc.section.2.2.2.p.1">HPACK indexed entries refer to an entry by its current position in the dynamic table.  As Figure 1 of <a href="#RFC7541">[RFC7541]</a> illustrates, newest entries have smallest indices, and oldest entries are evicted first if the table is full.  Under this scheme, each insertion to the table causes the index of all existing entries to change (implicitly).  The approach is acceptable for HTTP/2 because TCP is totally ordered, but it is is problematic in the out-of-order context of QUIC.</p>
-<p id="rfc.section.2.2.2.p.2">QCRAM uses a hybrid absolute-relative indexing approach.  Every QCRAM header block fragment starts with an integer that conveys an absolute base index.  The format of individual indexed representations does not change, but their semantics become absolute in combination with the base index.  Similarly, the base index is used to perform table insertions at unambiguous positions.</p>
-<h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a> <a href="#changes-to-hpack-and-http-over-quic" id="changes-to-hpack-and-http-over-quic">Changes to HPACK and HTTP over QUIC</a></h1>
-<p id="rfc.section.3.p.1">QCRAM is optional on a per header frame basis.  QCRAM enabled header frames can be decoded on receipt, otherwise the header frame should be processed in strict order as per Section 4.2.1 of the HTTP mapping.</p>
-<h2 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#hpack-changes" id="hpack-changes">HPACK changes</a></h2>
-<p id="rfc.section.3.1.p.1">QCRAM adds three integer <em>epochs</em> to HPACK state, all derived from the sequence numbers of HTTP Mapping (refer to <a href="#QUIC-HTTP">[QUIC-HTTP]</a> Sections 5.2.2 and 5.2.4.), and provided to the HPACK layer by the HTTP mapping:</p>
+<p id="rfc.section.2.2.p.3">The encoder can choose on a per header block basis whether to favor higher compression ratio or HoL resilience, signaled by the BLOCKING flag in HEADERS and PUSH_PROMISE frames (see <a href="#hq-frames">Section 3</a>).</p>
+<p id="rfc.section.2.2.p.4">If HB contains no vulnerable header fields, BLOCKING MUST be 0.</p>
+<p id="rfc.section.2.2.p.5">If BLOCKING is set, then for each <samp>HB[i]</samp> that is vulnerable :</p>
 <p/>
 
 <ol>
-  <li><samp>encode_epoch</samp>: the sequence number of the header frame enclosing the header block fragment, as per the HTTP Mapping.  When entries are added to they dynamic table, the current encode epoch is stored with the entry.</li>
-  <li><samp>packet_epoch</samp>: the first encode epoch in the current QUIC packet.  When multiple header frames are packed into a single QUIC packet, they should be ordered.</li>
-  <li><samp>commit_epoch</samp>: the highest in-order encode epoch acknowledged to the encoder side.</li>
+  <li><samp>HB[i]</samp> is represented with one of the Literal variants (see <a href="#RFC7541">[RFC7541]</a> Section 6.2), trading lower compression ratio for HoL resilience.</li>
 </ol>
-<p id="rfc.section.3.1.p.3">The following must hold: <samp>encode_epoch &gt;= packet_epoch &gt; commit_epoch</samp>.  Section 3.2 describes ho the epoch values are computed.</p>
-<h3 id="rfc.section.3.1.1"><a href="#rfc.section.3.1.1">3.1.1.</a> <a href="#indexed-representations" id="indexed-representations">Indexed representations</a></h3>
-<p id="rfc.section.3.1.1.p.1">As each header block fragment is processed, HPACK is informed whether QCRAM is enabled.  If so, the encoder will emit an indexed representation only if it is not vulnerable to HoL blocking, that is if there is a matching entry in the dynamic table such that: <samp>entry.encode_epoch &lt;= commit_epoch or entry.encode_epoch &gt;= packet_epoch</samp>.  Otherwise a literal must be used.</p>
-<h3 id="rfc.section.3.1.2"><a href="#rfc.section.3.1.2">3.1.2.</a> <a href="#indexing" id="indexing">Indexing</a></h3>
-<p id="rfc.section.3.1.2.p.1">Every QCRAM header block fragment must start with a single HPACK integer that encodes the value of the base index, defined as the total number of entries that had been inserted to the dynamic table before encoding the current header block.  As described above, the decoder will use this as the starting point for insertions, and for interpreting indexed representations.</p>
-<h3 id="rfc.section.3.1.3"><a href="#rfc.section.3.1.3">3.1.3.</a> <a href="#table-evictions" id="table-evictions">Table evictions</a></h3>
-<p id="rfc.section.3.1.3.p.1">Since QCRAM allows headers to be processed out of order, it might be possible that a header block fragment may contain references to entries that have been evicted by the time it arrives.  For example, suppose HB was encoded after HA, and HB evicts an entry referenced by HA.  If due to network drops HB is decoded first, the reference in HA will become invalid.</p>
-<p id="rfc.section.3.1.3.p.2">To handle this with minimal complexity, QCRAM takes the following approach: if <samp>packet_epoch &gt; commit_epoch + 1</samp>, and if while encoding the current header block fragment an eviction becomes necessary, then QCRAM must be disabled for the current header frame.  The first condition might be paraphrased as: are there any header block packets still in flight before the current one?</p>
-<p id="rfc.section.3.1.3.p.3">In the above example, HB would not be QCRAM enabled, hence the decoder must ensure to process HB strictly after HA.</p>
-<p id="rfc.section.3.1.3.p.4">*Compared to other QUIC state such as receive buffers, the default table size of 4,096 octets (see <a href="#RFC7540">[RFC7540]</a> Section 6.5.2.) is very modest.  Deployment data suggests it is rarely increased in practice, and experiments to increase it did not yield significant gains.  Consequently, I think it&#8217;s best to avoid any heroic measures to deal with performance under full tables. *</p>
-<h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2.</a> <a href="#http-mapping-changes" id="http-mapping-changes">HTTP Mapping changes</a></h2>
-<p id="rfc.section.3.2.p.1">An additional flag is added to HEADERS and PUSH_PROMISE (refer to Sections 5.2.1. and 5.2.4. of <a href="#QUIC-HTTP">[QUIC-HTTP]</a>):</p>
-<p id="rfc.section.3.2.p.2">QCRAM (0x8): This header block fragment can be decoded upon receipt.</p>
-<p id="rfc.section.3.2.p.3">When encoding headers, the HTTP mapping layer notifies the HPACK layer whether QCRAM is set, and provides the commit, packet, and encoding epochs:</p>
+<p id="rfc.section.2.2.p.7">If BLOCKING is not set then HB is encoded in blocking mode:</p>
 <p/>
 
-<ul>
-  <li>the encoding epoch increments for every new header block fragment encoded.</li>
-  <li>an encode epoch is considered acknowledged when all the bytes of the corresponding header frame have been acknowledged.  The mapping layer keeps track of header frames by their encode epochs, and monitors transport acknowledgments to determine <samp>commit_epoch</samp>, the highest in-order acknowledged encode epoch.  <em>This piggybacks on existing QUIC transport mechanisms, no additional wire format changes are needed.</em></li>
-  <li>the mapping layer coordinates with packet writing to manage space available for header frames, and advances the packet epoch at packet boundaries.  Implementations that forgo coordinated packetization MUST set <samp>packet_epoch</samp> equal to <samp>encode_epoch</samp>.</li>
-</ul>
-<h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#performance-considerations" id="performance-considerations">Performance considerations</a></h1>
-<p id="rfc.section.4.p.1">Beyond sequence numbers already defined in Section 5.2.1 and 5.2.4, the only additional overhead of QCRAM is the base index added to header blocks.  For a typical connection with fewer than 256 requests, the index would consume approximately 1 byte per header block.</p>
-<p id="rfc.section.4.p.2">It might be advantageous to allow implementations to send header frames on the HTTP control stream (QUIC stream 3).  Such headers would not be associated with any HTTP transaction, but could be used strategically to improve performance. For instance, as a means to avoid disabling QCRAM due to table eviction, or to ensure most frequently used entries have the smallest indices.</p>
-<p id="rfc.section.4.p.3">For QCRAM header frames, the base index is sufficient to decode correctly.  If QCRAM were made mandatory rather than optional, then it would be feasible to remove sequence number from wire format of <samp>HEADERS</samp> and <samp>PUSH_PROMISE</samp> frames, as well as the QCRAM flag.  However, this would imply that once the table became full, insertions could only occur during during periods with a single header block in flight.</p>
-<p id="rfc.section.4.p.4">Alternatively, if it were desirable to support a middle ground between totally ordered HPACK and the present draft, one way might be to extend the concept of packet epoch to denote a sequence of one <em>or more</em> packets.  A pair of new flags would be added to header frames to signal the start and end of such packet sequences.  The decoder would have to have buffering based logic to ensure header blocks within a packet sequence are processed in order, similar to the logic used in totally ordered HPACK.</p>
-<h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
-<p id="rfc.section.5.p.1">TBD.</p>
-<h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
-<p id="rfc.section.6.p.1">This document currently makes no request of IANA, and might not need to.</p>
-<h1 id="rfc.section.7"><a href="#rfc.section.7">7.</a> <a href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h1>
-<p id="rfc.section.7.p.1">This draft draws heavily on the text of <a href="#RFC7541">[RFC7541]</a>.  The indirect input of those authors is gratefully acknowledged, as well as ideas from:</p>
+<ol>
+  <li><samp>HB[i]</samp> is represented with an Indexed Representation.  This favors compression ratio.</li>
+</ol>
+<p id="rfc.section.2.2.p.9">In blocking mode, after reading HB&#8217;s prefix stream B might block.  Stream B proceeds with reading and processing the rest of HB only when all HB&#8217;s dependencies are satisfied.  The header prefix contains table offset information that establishes total ordering among all headers, regardless of reordering in the transport (see <a href="#absolute-index">Section 4.1</a>).  In blocking mode, the prefix additionally identifies the largest (absolute) index I that HB depends on (see <samp>Depends</samp> in Section <a href="#overview-absolute">Section 4.2</a>).  HB&#8217;s dependencies are satisfied when all entries less than or equal to I have been inserted into the table.  Notice that while blocked, HB&#8217;s header field data remains in the stream&#8217;s flow control window.</p>
+<h1 id="rfc.section.3"><a href="#rfc.section.3">3.</a> <a href="#hq-frames" id="hq-frames">HTTP over QUIC mapping extensions</a></h1>
+<h2 id="rfc.section.3.1"><a href="#rfc.section.3.1">3.1.</a> <a href="#headers-and-pushpromise" id="headers-and-pushpromise">HEADERS and PUSH_PROMISE</a></h2>
+<p id="rfc.section.3.1.p.1">HEADER and PUSH_PROMISE frames define a new flag BLOCKING (0x01): Indicates the stream might need to wait for dependent headers before processing.  If 0, the header can always be processed immediately upon receipt.</p>
+<h2 id="rfc.section.3.2"><a href="#rfc.section.3.2">3.2.</a> <a href="#headerack" id="headerack">HEADER_ACK</a></h2>
+<p id="rfc.section.3.2.p.1">The HEADER_ACK frame (type=0x8) is sent by the decoder side to the encoder when a the decoder has fully processed a header block.  It is used by the encoder to determine whether subsequent indexed representations that might reference that block are vulnerable to HoL blocking.  The HEADER_ACK frame does not define any flags, and has no payload.</p>
+<h1 id="rfc.section.4"><a href="#rfc.section.4">4.</a> <a href="#hpack-extensions" id="hpack-extensions">HPACK extensions</a></h1>
+<h2 id="rfc.section.4.1"><a href="#rfc.section.4.1">4.1.</a> <a href="#absolute-index" id="absolute-index">Header Block Prefix</a></h2>
+<p id="rfc.section.4.1.p.1">In HEADERS and PUSH_PROMISE frames, HPACK Header data are prefixed by a pair of integers pair of integers: <samp>Fill</samp> and the <samp>Evictions</samp>. <samp>Fill</samp> is the number of entries in the table, and <samp>Evictions</samp> is the cumulative number entries that have been evicted from the table.  Their sum is the cumulative number of entries inserted before the following header block was encoded.  Each is encoded as a single HPACK integer (8-bit prefix):</p>
+<div id="rfc.figure.1"/>
+<div id="fig-base-index"/>
+<pre>
+    0 1 2 3 4 5 6 7 
+   +-+-+-+-+-+-+-+-+
+   |Fill       (8+)|
+   +---------------+
+   |Evictions  (8+)|
+   +---------------+
+</pre>
+<p class="figure">Figure 1: Absolute indexing (BLOCKING=0x0)</p>
+<p><a href="#overview-absolute">Section 4.2</a> describes the role of <samp>Fill</samp> and <a href="#evictions">Section 4.3</a> covers the role of <samp>Evictions</samp>.</p>
+<p id="rfc.section.4.1.p.3">When BLOCKING flag is 0x1, a the prefix additionally contains a third HPACK integer (8-bit prefix) &#8216;Depends&#8217;:</p>
+<div id="rfc.figure.2"/>
+<div id="fig-prefix-long"/>
+<pre>
+    0 1 2 3 4 5 6 7 
+   +-+-+-+-+-+-+-+-+
+   |Fill       (8+)|
+   +---------------+
+   |Evictions  (8+)|
+   +---------------+
+   |Depends    (8+)|
+   +---------------+
+</pre>
+<p class="figure">Figure 2: Absolute indexing (BLOCKING=0x1)</p>
+<p id="rfc.section.4.1.p.4">Depends is used to identify header dependencies, namely the largest table entry referred to by (indexed representations within) the following header block, its usage is described in <a href="#overview-hol-avoidance">Section 2.2</a>.  The largest entry index is <samp>Evictions + Fill - Depends</samp>.</p>
+<h2 id="rfc.section.4.2"><a href="#rfc.section.4.2">4.2.</a> <a href="#overview-absolute" id="overview-absolute">Hybrid absolute-relative indexing</a></h2>
+<p id="rfc.section.4.2.p.1">HPACK indexed entries refer to an entry by its current position in the dynamic table.  As <a href="https://tools.ietf.org/html/rfc7541#section-2.3.3">Figure 1 of RFC7541</a> illustrates, newest entries have smallest indices, and oldest entries are evicted first if the table is full.  Under this scheme, each insertion to the table causes the index of all existing entries to change (implicitly).  Implicit index updates are acceptable for HTTP/2 because TCP is totally ordered, but it is is problematic in the out-of-order context of QUIC.</p>
+<p id="rfc.section.4.2.p.2">QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in <a href="#absolute-index">Section 4.1</a> is used by the decoder to interpret all subsequent HPACK instructions at absolute positions for indexed lookups and insertions.</p>
+<p id="rfc.section.4.2.p.3">Since QCRAM handles blocking at the stream level, it is an error if the HPACK decoder encounters an indexed representation that refers to an entry missing from the table, and the connection MUST be closed with the <samp>HTTP_HPACK_DECOMPRESSION_FAILED</samp> error code.</p>
+<h2 id="rfc.section.4.3"><a href="#rfc.section.4.3">4.3.</a> <a href="#evictions" id="evictions">Preventing Eviction Races</a></h2>
+<p id="rfc.section.4.3.p.1">Due to out of order arrival, QCRAM&#8217;s eviction algorithm requires changes (relative to HPACK) to avoid the possibility that an indexed representation is decoded after the referenced entry is already evicted.  QCRAM employs a two-phase eviction algorithm, in which the encoder will not evict entries that have outstanding (unacknowledged) references.  The QCRAM encoder maintains a counter as entries are evicted, which is the cumulative number of evictions so far, <samp>Evictions</samp> (<a href="#absolute-index">Section 4.1</a>).  On arrival at the decoder, if <samp>Evictions</samp> is higher than previously seen, the decoder MUST evict all entries at or below.  Unlike HPACK where the decoder follows the same logic as the encoder to perform evictions, in QCRAM the decoder evicts exclusively based on the encoder&#8217;s explicit guidance.</p>
+<h3 id="rfc.section.4.3.1"><a href="#rfc.section.4.3.1">4.3.1.</a> <a href="#blocked-evictions" id="blocked-evictions">Blocked Evictions</a></h3>
+<p id="rfc.section.4.3.1.p.1">In some cases, the encoder must forgo eviction by selecting a literal representation (blocked eviction), namely in the event that the entry subject to eviction <em>is</em> referenced by one or more unacknowledged header frames. To assure that the blocked eviction case is rare, a form of thresholding MAY be applied that constrains selection of Indexed representations, such that the oldest entries in the dynamic table will largely be evictable.  The constraint is applied when encoding header fields: comparing the cumulative position (in bytes) of the matching entry to a threshold, categorizing oldest entries (past threshold) as at-risk.  Avoiding references to at-risk entries, the encoder SHOULD use an Indexed-Duplicate representation instead (see <a href="#indexed-duplicate">Section 4.5</a>).</p>
+<h2 id="rfc.section.4.4"><a href="#rfc.section.4.4">4.4.</a> <a href="#handling-stream-resets" id="handling-stream-resets">Handling Stream Resets</a></h2>
+<p id="rfc.section.4.4.p.1">The QCRAM encoder has the option to select representations that might require blocking (<a href="#overview-hol-avoidance">Section 2.2</a> case 3), but the decoder must be prevented from becoming hung if the stream associated with the referenced entry is reset.  On stream reset, the QCRAM encoder MUST check if the stream has unacknowledged headers, and if so resend them on the Control Stream (<a href="#QUIC-HTTP">[QUIC-HTTP]</a> Section 4.1).  If header blocks are resent on the control stream, duplicate arrivals are possible due to reset-acknowledgment races.  The decoder MUST ignore duplicate header block arrivals, which is straightforward because of unambiguous indexing (see <a href="#overview-absolute">Section 4.2</a>).</p>
+<h2 id="rfc.section.4.5"><a href="#rfc.section.4.5">4.5.</a> <a href="#indexed-duplicate" id="indexed-duplicate">Refreshing Entries with Duplication</a></h2>
+<div id="rfc.figure.3"/>
+<div id="fig-index-with-duplication"/>
+<pre>
+    0 1 2 3 4 5 6 7 
+   +-+-+-+-+-+-+-+-+
+   |0|0|1|Index(5+)|
+   +-+-+-+---------+
+</pre>
+<p class="figure">Figure 3: Indexed Header Field with Duplication</p>
+<p><em>Indexed-Duplicates</em> are treated as an Indexed Header Field Representation (see <a href="#RFC7541">[RFC7541]</a> Section 6.1), additionally inserting a new duplicate entry.  <a href="#RFC7541">[RFC7541]</a> allows duplicate HPACK table entries, that is entries that have the same name and value.</p>
+<p>
+  <em>Figure 2 annexes the representation for HPACK Dynamic Table Size Update (see Section 6.3 of RFC7541), which is not supported by HTTP over QUIC.</em>
+</p>
+<h3 id="rfc.section.4.5.1"><a href="#rfc.section.4.5.1">4.5.1.</a> <a href="#de-duplication" id="de-duplication">Mandatory Entry De-duplication</a></h3>
+<p id="rfc.section.4.5.1.p.1">To help mitigate memory consumption due to duplicate entries, HPACK for QCRAM is required to de-duplicate strings in the dynamic table. The table insertion logic should check if the new entry matches any existing entries (name and value), and if so, table accounting MUST charge only the overhead portion (<a href="#RFC7541">[RFC7541]</a> Section 4.1) to the new entry.</p>
+<p id="rfc.section.4.5.1.p.2">Specific de-duplication mechanisms are left to implementations, but using a map in conjunction with reference counted pointers to strings would be typical.</p>
+<h1 id="rfc.section.5"><a href="#rfc.section.5">5.</a> <a href="#performance-considerations" id="performance-considerations">Performance considerations</a></h1>
+<h2 id="rfc.section.5.1"><a href="#rfc.section.5.1">5.1.</a> <a href="#speculative-updates" id="speculative-updates">Speculative table updates</a></h2>
+<p id="rfc.section.5.1.p.1">Implementations can <em>speculatively</em> send header frames on the HTTP Connection Control Stream.  Such headers would not be associated with any HTTP transaction, but could be used strategically to improve performance.  For instance, the encoder might decide to <em>refresh</em> by sending Indexed-Duplicate representations for popular header fields (<a href="#absolute-index">Section 4.1</a>), ensuring they have small indices and hence minimal size on the wire.</p>
+<h2 id="rfc.section.5.2"><a href="#rfc.section.5.2">5.2.</a> <a href="#fixed-overhead" id="fixed-overhead">Fixed overhead.</a></h2>
+<p id="rfc.section.5.2.p.1">HPACK defines overhead as 32 bytes (<a href="#RFC7541">[RFC7541]</a> Section 4.1).  QCRAM adds some per-entry state, to track acknowledgment status and eviction reference count, and requires mechanisms to de-duplicate strings.  A larger value than 32 might be more accurate for QCRAM.</p>
+<h2 id="rfc.section.5.3"><a href="#rfc.section.5.3">5.3.</a> <a href="#co-ordinated-packetization" id="co-ordinated-packetization">Co-ordinated Packetization</a></h2>
+<p id="rfc.section.5.3.p.1">In <a href="#overview-hol-avoidance">Section 2.2</a> case 3, an exception exists when the representation of <samp>HA[i]</samp> and <samp>HB[j]</samp> are delivered within the same transport packet.  If so, there is no risk of HoL blocking and using an indexed representation is strictly better than using a literal.  An implementation could exploit this exception by employing co-ordination between QCRAM compression and QUIC transport packetization.</p>
+<h1 id="rfc.section.6"><a href="#rfc.section.6">6.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a></h1>
+<p id="rfc.section.6.p.1">TBD.</p>
+<h1 id="rfc.section.7"><a href="#rfc.section.7">7.</a> <a href="#iana-considerations" id="iana-considerations">IANA Considerations</a></h1>
+<p id="rfc.section.7.p.1">This document currently makes no request of IANA, and might not need to.</p>
+<h1 id="rfc.section.8"><a href="#rfc.section.8">8.</a> <a href="#acknowledgments" id="acknowledgments">Acknowledgments</a></h1>
+<p id="rfc.section.8.p.1">This draft draws heavily on the text of <a href="#RFC7541">[RFC7541]</a>.  The indirect input of those authors is gratefully acknowledged, as well as ideas from:</p>
 <p/>
 
 <ul>
   <li>Mike Bishop</li>
   <li>Patrick McManus</li>
   <li>Biren Roy</li>
+  <li>Alan Frindell</li>
+  <li>Ian Swett</li>
+  <li>Ryan Hamilton</li>
 </ul>
-<h1 id="rfc.references"><a href="#rfc.references">8.</a> Normative References</h1>
+<h1 id="rfc.references"><a href="#rfc.references">9.</a> Normative References</h1>
 <table>
   <tbody>
     <tr>
       <td class="reference">
         <b id="QUIC-HTTP">[QUIC-HTTP]</b>
       </td>
-      <td class="top"><a title="Microsoft">Bishop, M.</a>, "<a>Hypertext Transfer Protocol (HTTP) over QUIC</a>"</td>
+      <td class="top"><a title="Microsoft">Bishop, M.</a>, "<a>Hypertext Transfer Protocol (HTTP) over QUIC</a>", December 2017.</td>
     </tr>
     <tr>
       <td class="reference">
         <b id="QUIC-TRANSPORT">[QUIC-TRANSPORT]</b>
       </td>
-      <td class="top"><a title="Google">Iyengar, J.</a> and <a title="Mozilla">M. Thomson</a>, "<a>QUIC: A UDP-Based Multiplexed and Secure Transport</a>"</td>
+      <td class="top"><a title="Google">Iyengar, J.</a> and <a title="Mozilla">M. Thomson</a>, "<a>QUIC: A UDP-Based Multiplexed and Secure Transport</a>", December 2017.</td>
     </tr>
     <tr>
       <td class="reference">

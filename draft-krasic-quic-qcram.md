@@ -57,7 +57,7 @@ description of HTTP/2, see {{?RFC7540}}. The description of HPACK is
 QCRAM modifies HPACK to allow correctness in the presence of out-of-order
 delivery, with flexibility for implementations to balance between resilience
 against HoL blocking and optimal compression ratio.  The design goals are to
-closely approach the compression ration of HPACK with substantially less
+closely approach the compression ratio of HPACK with substantially less
 head-of-line blocking under the same loss conditions.
 
 QCRAM is intended to be a relatively non-intrusive extension to HPACK; an

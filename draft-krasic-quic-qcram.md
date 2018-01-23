@@ -180,7 +180,7 @@ prefix integer:
 
 {{overview-absolute}} describes the role of `Base Index`.
 
-When the BLOCKING flag is 0x1, a the prefix additionally contains a third HPACK
+When the BLOCKING flag is 0x1, a the prefix additionally contains a second HPACK
 integer (8-bit prefix) 'Depends':
 
 ~~~~~~~~~~  drawing

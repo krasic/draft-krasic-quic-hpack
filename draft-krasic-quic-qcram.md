@@ -165,26 +165,20 @@ the headers for an HTTP request or response.
 
 ## Header Block Prefix {#absolute-index}
 
-In HEADERS and PUSH_PROMISE frames, HPACK Header data are prefixed by a pair of
-integers: `Fill` and the `Evictions`.
-
-`Fill` is the number of entries in the table, and `Evictions` is the cumulative
-number of entries that have been evicted from the table.  Their sum is the
-cumulative number of entries inserted before the following header block was
-encoded.  Each is encoded as a single 8-bit prefix integer:
+In HEADERS and PUSH_PROMISE frames, HPACK Header data is prefixed by an integer:
+`Base Index`.  `Base index` is the cumulative number of entries added to the
+table prior to encoding the current block, it is encoded as a single 8-bit
+prefix integer:
 
 ~~~~~~~~~~  drawing
     0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+
-   |Fill       (8+)|
-   +---------------+
-   |Evictions  (8+)|
+   |Base Index (8+)|
    +---------------+
 ~~~~~~~~~~
 {:#fig-base-index title="Absolute indexing (BLOCKING=0x0)"}
 
-{{overview-absolute}} describes the role of `Fill` and {{evictions}} covers the
-role of `Evictions`.
+{{overview-absolute}} describes the role of `Base Index`.
 
 When the BLOCKING flag is 0x1, a the prefix additionally contains a third HPACK
 integer (8-bit prefix) 'Depends':
@@ -192,9 +186,7 @@ integer (8-bit prefix) 'Depends':
 ~~~~~~~~~~  drawing
     0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+
-   |Fill       (8+)|
-   +---------------+
-   |Evictions  (8+)|
+   |Base Index (8+)|
    +---------------+
    |Depends    (8+)|
    +---------------+
@@ -204,7 +196,7 @@ integer (8-bit prefix) 'Depends':
 Depends is used to identify header dependencies, namely the largest table entry
 referred to by indexed representations within the following header block.  Its
 usage is described in {{overview-hol-avoidance}}.  The largest index referenced
-is `Evictions + Fill - Depends`.
+is `Base Index - Depends`.
 
 ## Hybrid absolute-relative indexing {#overview-absolute}
 
@@ -231,20 +223,15 @@ Due to out-of-order arrival, QCRAM's eviction algorithm requires changes
 (relative to HPACK) to avoid the possibility that an indexed representation is
 decoded after the referenced entry has already been evicted.  QCRAM employs a
 two-phase eviction algorithm, in which the encoder will not evict entries that
-have outstanding (unacknowledged) references.  The QCRAM encoder maintains a
-counter as entries are evicted, which is the cumulative number of evictions so
-far, `Evictions` ({{absolute-index}}).  On arrival at the decoder, if
-`Evictions` is higher than previously seen, the decoder MUST evict the
-appropriate number of entries.  Unlike HPACK, where the decoder follows the same
-logic as the encoder to perform evictions, in QCRAM the decoder evicts
-exclusively based on the encoder's explicit guidance.
+have outstanding (unacknowledged) references.
 
 ### Blocked Evictions
 
-The decoder MUST NOT permit an entry to be evicted while a reference to that entry remains
-unacknowledged.  If a new header to be inserted into the dynamic table would cause
-the eviction of such an entry, the encoder MUST NOT emit the insert instruction
-until the reference has been processed by the decoder and acknowledged.
+The decoder MUST NOT permit an entry to be evicted while a reference to that
+entry remains unacknowledged.  If a new header to be inserted into the dynamic
+table would cause the eviction of such an entry, the encoder MUST NOT emit the
+insert instruction until the reference has been processed by the decoder and
+acknowledged.
 
 The encoder can emit a literal representation for the new header in order to
 avoid encoding delays, and MAY insert the header into the table later if
@@ -272,17 +259,6 @@ entries that have the same name and value.
 This replaces the HPACK instruction for Dynamic Table Size Update (see Section
 6.3 of {{RFC7541}}, which is not supported by HTTP over QUIC.
 
-### Mandatory Entry De-duplication {#de-duplication}
-
-To help mitigate memory consumption due to duplicate entries, HPACK for QCRAM is
-required to de-duplicate strings in the dynamic table. The table insertion logic
-should check if the new entry matches any existing entries (name and value), and
-if so, table accounting MUST charge only the overhead portion ({{!RFC7541}}
-Section 4.1) to the new entry.
-
-Specific de-duplication mechanisms are left to implementations, but using a map
-in conjunction with reference counted pointers to strings would be typical.
-
 # Performance considerations
 
 ## Speculative table updates {#speculative-updates}
@@ -297,9 +273,8 @@ and hence minimal size on the wire.
 ## Fixed overhead.
 
 HPACK defines overhead as 32 bytes ({{!RFC7541}} Section 4.1).  QCRAM adds some
-per-entry state, to track acknowledgment status and eviction reference count,
-and requires mechanisms to de-duplicate strings.  A larger value than 32 might
-be more accurate for QCRAM.
+per-entry state, to track acknowledgment status and eviction reference count.  A
+larger value than 32 might be more accurate for QCRAM.
 
 ## Co-ordinated Packetization
 

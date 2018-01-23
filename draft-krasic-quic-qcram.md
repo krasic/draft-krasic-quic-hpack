@@ -166,10 +166,14 @@ flags, and has no payload.
 
 ## Allowed Instructions
 
-HEADERS frames on the Control Streams SHOULD contain only Indexed representations.
+HEADERS frames on the Control Streams SHOULD contain only Literal with
+Incremental Indexing representations.  Frames on this stream modify the
+dynamic table state without generating output to any particular request.
+
 HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain
-Indexed representations.  Frames on these streams reference the dynamic table
-in a particular state without modifying it.
+Literal with Incremental Indexing representations.  Frames on these streams
+reference the dynamic table in a particular state without modifying it, but emit
+the headers for an HTTP request or response.
 
 ## Header Block Prefix {#absolute-index}
 

@@ -108,6 +108,7 @@ and `HB`. Stream `B` experiences HoL blocking due to `A` as follows:
    until `HA`'s packet is successfully retransmitted.
 
 ## How QCRAM minimizes HoL blocking {#overview-hol-avoidance}
+
 Continuing the example, QCRAM's approach is as follows.
 
 1. `HB[i]` will not introduce HoL blocking if `HA` has been acknowledged,
@@ -117,15 +118,15 @@ Continuing the example, QCRAM's approach is as follows.
 
 The encoder can choose on a per header block basis whether to favor higher
 compression ratio or HoL resilience, signaled by the BLOCKING flag in HEADERS and
-PUSH_PROMISE frames (see {{hq-frames}}).  
+PUSH_PROMISE frames (see {{hq-frames}}).
 
-If HB contains no vulnerable header fields, BLOCKING MUST be 0.  
+If HB contains no vulnerable header fields, BLOCKING MUST be 0.
 
 If BLOCKING is not set, then for each `HB[i]` that is vulnerable:
 
 2. `HB[i]` is represented with one of the Literal variants (see {{RFC7541}}
     Section 6.2), trading lower compression ratio for HoL resilience.
-   
+
 If BLOCKING is set then HB is encoded in blocking mode:
 
 3. `HB[i]` is represented with an Indexed Representation.  This favors
@@ -146,9 +147,12 @@ control window.
 
 ## HEADERS and PUSH_PROMISE
 
-HEADER and PUSH_PROMISE frames define a new flag BLOCKING (0x01): Indicates the
+HEADERS and PUSH_PROMISE frames define a new flag BLOCKING (0x01): Indicates the
 stream might need to wait for dependent headers before processing.  If 0, the
 header can always be processed immediately upon receipt.
+
+HEADERS frames can be sent on the Connection Control Stream as well as on
+request / push streams.
 
 ## HEADER_ACK
 
@@ -160,6 +164,17 @@ flags, and has no payload.
 
 # HPACK extensions
 
+## Allowed Instructions
+
+HEADERS frames on the Control Streams SHOULD contain only Literal with
+Incremental Indexing representations.  Frames on this stream modify the
+dynamic table state without generating output to any particular request.
+
+HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain
+Literal with Incremental Indexing representations.  Frames on these streams
+reference the dynamic table in a particular state without modifying it, but emit
+the headers for an HTTP request or response.
+
 ## Header Block Prefix {#absolute-index}
 
 In HEADERS and PUSH_PROMISE frames, HPACK Header data are prefixed by a pair of
@@ -170,7 +185,7 @@ inserted before the following header block was encoded.  Each is encoded as a
 single HPACK integer (8-bit prefix):
 
 ~~~~~~~~~~  drawing
-    0 1 2 3 4 5 6 7 
+    0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+
    |Fill       (8+)|
    +---------------+
@@ -186,7 +201,7 @@ When BLOCKING flag is 0x1, a the prefix additionally contains a third HPACK
 integer (8-bit prefix) 'Depends':
 
 ~~~~~~~~~~  drawing
-    0 1 2 3 4 5 6 7 
+    0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+
    |Fill       (8+)|
    +---------------+
@@ -215,7 +230,7 @@ is is problematic in the out-of-order context of QUIC.
 
 QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in
 {{absolute-index}} is used by the decoder to interpret all subsequent HPACK
-instructions at absolute positions for indexed lookups and insertions. 
+instructions at absolute positions for indexed lookups and insertions.
 
 Since QCRAM handles blocking at the stream level, it is an error if the HPACK
 decoder encounters an indexed representation that refers to an entry missing
@@ -248,21 +263,10 @@ threshold) as at-risk.  Avoiding references to at-risk entries, the
 encoder SHOULD use an Indexed-Duplicate representation instead (see
 {{indexed-duplicate}}).
 
-## Handling Stream Resets
-The QCRAM encoder has the option to select representations that might require
-blocking ({{overview-hol-avoidance}} case 3), but the decoder must be
-prevented from becoming hung if the stream associated with the referenced entry
-is reset.  On stream reset, the QCRAM encoder MUST check if the stream has
-unacknowledged headers, and if so resend them on the Control Stream
-({{QUIC-HTTP}} Section 4.1).  If header blocks are resent on the control stream,
-duplicate arrivals are possible due to reset-acknowledgment races.  The decoder
-MUST ignore duplicate header block arrivals, which is straightforward because of
-unambiguous indexing (see {{overview-absolute}}).
-
 ## Refreshing Entries with Duplication {#indexed-duplicate}
 
 ~~~~~~~~~~  drawing
-    0 1 2 3 4 5 6 7 
+    0 1 2 3 4 5 6 7
    +-+-+-+-+-+-+-+-+
    |0|0|1|Index(5+)|
    +-+-+-+---------+
@@ -304,7 +308,7 @@ per-entry state, to track acknowledgment status and eviction reference count,
 and requires mechanisms to de-duplicate strings.  A larger value than 32 might
 be more accurate for QCRAM.
 
-## Co-ordinated Packetization 
+## Co-ordinated Packetization
 In {{overview-hol-avoidance}}, an exception exists when the representation of
 `HA[i]` and `HB[j]` are delivered within the same transport packet.  If so,
 there is no risk of HoL blocking and using an indexed representation is strictly

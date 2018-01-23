@@ -271,7 +271,7 @@ Internet-Draft                    QCRAM                     January 2018
    Section 3.3 describes the role of "Base Index".
 
    When the BLOCKING flag is 0x1, a the prefix additionally contains a
-   third HPACK integer (8-bit prefix) 'Depends':
+   second HPACK integer (8-bit prefix) 'Depends':
 
 
 

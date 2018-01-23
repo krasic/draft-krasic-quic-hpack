@@ -124,11 +124,31 @@ request / push streams.
 
 ## HEADER_ACK
 
-The HEADER_ACK frame (type=0x8) is sent from the decoder to the encoder when the
-decoder has fully processed a header block on a stream.  It is used by the
-encoder to determine whether subsequent indexed representations that might
-reference that block are vulnerable to HoL blocking.  The HEADER_ACK frame does
-not define any flags, and has no payload.
+The HEADER_ACK frame (type=0x8) is sent from the decoder to the encoder on the
+Control Stream when the decoder has fully processed a header block.  It is used
+by the encoder to determine whether subsequent indexed representations that
+might reference that block are vulnerable to HoL blocking.
+
+The HEADER_ACK frame indicates the stream on which the header block was
+processed by encoding the Stream ID as a variable-length integer. The same
+Stream ID can be identified multiple times, as multiple header-containing blocks
+can be sent on a single stream in the case of intermediate responses, trailers,
+pushed requests, etc. as well as on the Control Streams.
+
+Since header frames on each stream are received and processed in order, this
+gives the encoder precise feedback on which header blocks within a stream have
+been fully processed.  This information can then be used to correctly track
+outstanding stream references to checkpoints.
+
+~~~~~~~~~~
+  0   1   2   3   4   5   6   7
++---+---+---+---+---+---+---+---+
+|        Stream ID [i]          |
++---+---------------------------+
+~~~~~~~~~~
+{: title="HEADER_ACK frame"}
+
+The HEADER_ACK frame does not define any flags.
 
 # HPACK extensions
 

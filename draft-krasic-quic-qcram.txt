@@ -77,21 +77,20 @@ Table of Contents
      3.1.  Allowed Instructions  . . . . . . . . . . . . . . . . . .   5
      3.2.  Header Block Prefix . . . . . . . . . . . . . . . . . . .   5
      3.3.  Hybrid absolute-relative indexing . . . . . . . . . . . .   6
-     3.4.  Preventing Eviction Races . . . . . . . . . . . . . . . .   7
+     3.4.  Preventing Eviction Races . . . . . . . . . . . . . . . .   6
        3.4.1.  Blocked Evictions . . . . . . . . . . . . . . . . . .   7
      3.5.  Refreshing Entries with Duplication . . . . . . . . . . .   7
-       3.5.1.  Mandatory Entry De-duplication  . . . . . . . . . . .   8
-   4.  Performance considerations  . . . . . . . . . . . . . . . . .   8
-     4.1.  Speculative table updates . . . . . . . . . . . . . . . .   8
+   4.  Performance considerations  . . . . . . . . . . . . . . . . .   7
+     4.1.  Speculative table updates . . . . . . . . . . . . . . . .   7
      4.2.  Fixed overhead. . . . . . . . . . . . . . . . . . . . . .   8
      4.3.  Co-ordinated Packetization  . . . . . . . . . . . . . . .   8
-   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   9
-   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   9
-   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .   9
+   5.  Security Considerations . . . . . . . . . . . . . . . . . . .   8
+   6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   8
+   7.  Acknowledgments . . . . . . . . . . . . . . . . . . . . . . .   8
    8.  References  . . . . . . . . . . . . . . . . . . . . . . . . .   9
      8.1.  Normative References  . . . . . . . . . . . . . . . . . .   9
      8.2.  Informative References  . . . . . . . . . . . . . . . . .   9
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  10
+   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   9
 
 1.  Introduction
 
@@ -106,6 +105,7 @@ Table of Contents
    independence between streams because it implements core transport
    functionality in a fully stream-aware manner.  However, the HTTP/QUIC
    mapping is still subject to HoL blocking if HPACK is used directly.
+   HPACK exploits multiplexing for greater compression, shrinking the
 
 
 
@@ -114,7 +114,6 @@ Krasic                    Expires July 27, 2018                 [Page 2]
 Internet-Draft                    QCRAM                     January 2018
 
 
-   HPACK exploits multiplexing for greater compression, shrinking the
    representation of headers that have appeared earlier on the same
    connection.  In the context of QUIC, this imposes a vulnerability to
    HoL blocking (see Section 1.1).
@@ -161,7 +160,8 @@ Internet-Draft                    QCRAM                     January 2018
    resilience (by avoiding them).  This is signaled by the BLOCKING flag
    in HEADERS and PUSH_PROMISE frames (see Section 2).
 
-
+   If a header block contains no vulnerable header fields, BLOCKING MUST
+   be 0.  This implies that the header fields are represented either as
 
 
 
@@ -170,8 +170,6 @@ Krasic                    Expires July 27, 2018                 [Page 3]
 Internet-Draft                    QCRAM                     January 2018
 
 
-   If a header block contains no vulnerable header fields, BLOCKING MUST
-   be 0.  This implies that the header fields are represented either as
    references to dynamic table entries which are known to have been
    received, or as Literal header fields (see [RFC7541] Section 6.2).
 
@@ -218,6 +216,8 @@ Internet-Draft                    QCRAM                     January 2018
    of intermediate responses, trailers, pushed requests, etc. as well as
    on the Control Streams.
 
+   Since header frames on each stream are received and processed in
+   order, this gives the encoder precise feedback on which header blocks
 
 
 
@@ -226,8 +226,6 @@ Krasic                    Expires July 27, 2018                 [Page 4]
 Internet-Draft                    QCRAM                     January 2018
 
 
-   Since header frames on each stream are received and processed in
-   order, this gives the encoder precise feedback on which header blocks
    within a stream have been fully processed.  This information can then
    be used to correctly track outstanding stream references to
    checkpoints.
@@ -258,20 +256,22 @@ Internet-Draft                    QCRAM                     January 2018
 
 3.2.  Header Block Prefix
 
-   In HEADERS and PUSH_PROMISE frames, HPACK Header data are prefixed by
-   a pair of integers: "Fill" and the "Evictions".
+   In HEADERS and PUSH_PROMISE frames, HPACK Header data is prefixed by
+   an integer: "Base Index".  "Base index" is the cumulative number of
+   entries added to the table prior to encoding the current block, it is
+   encoded as a single 8-bit prefix integer:
 
-   "Fill" is the number of entries in the table, and "Evictions" is the
-   cumulative number of entries that have been evicted from the table.
-   Their sum is the cumulative number of entries inserted before the
-   following header block was encoded.  Each is encoded as a single
-   8-bit prefix integer:
+       0 1 2 3 4 5 6 7
+      +-+-+-+-+-+-+-+-+
+      |Base Index (8+)|
+      +---------------+
 
+                Figure 1: Absolute indexing (BLOCKING=0x0)
 
+   Section 3.3 describes the role of "Base Index".
 
-
-
-
+   When the BLOCKING flag is 0x1, a the prefix additionally contains a
+   second HPACK integer (8-bit prefix) 'Depends':
 
 
 
@@ -284,24 +284,7 @@ Internet-Draft                    QCRAM                     January 2018
 
        0 1 2 3 4 5 6 7
       +-+-+-+-+-+-+-+-+
-      |Fill       (8+)|
-      +---------------+
-      |Evictions  (8+)|
-      +---------------+
-
-                Figure 1: Absolute indexing (BLOCKING=0x0)
-
-   Section 3.3 describes the role of "Fill" and Section 3.4 covers the
-   role of "Evictions".
-
-   When the BLOCKING flag is 0x1, a the prefix additionally contains a
-   third HPACK integer (8-bit prefix) 'Depends':
-
-       0 1 2 3 4 5 6 7
-      +-+-+-+-+-+-+-+-+
-      |Fill       (8+)|
-      +---------------+
-      |Evictions  (8+)|
+      |Base Index (8+)|
       +---------------+
       |Depends    (8+)|
       +---------------+
@@ -311,7 +294,7 @@ Internet-Draft                    QCRAM                     January 2018
    Depends is used to identify header dependencies, namely the largest
    table entry referred to by indexed representations within the
    following header block.  Its usage is described in Section 1.2.  The
-   largest index referenced is "Evictions + Fill - Depends".
+   largest index referenced is "Base Index - Depends".
 
 3.3.  Hybrid absolute-relative indexing
 
@@ -329,15 +312,6 @@ Internet-Draft                    QCRAM                     January 2018
    subsequent HPACK instructions at absolute positions for indexed
    lookups and insertions.
 
-
-
-
-
-Krasic                    Expires July 27, 2018                 [Page 6]
-
-Internet-Draft                    QCRAM                     January 2018
-
-
    Since QCRAM handles blocking at the header block level, it is an
    error if the HPACK decoder encounters an indexed representation that
    refers to an entry missing from the table, and the connection MUST be
@@ -350,14 +324,19 @@ Internet-Draft                    QCRAM                     January 2018
    representation is decoded after the referenced entry has already been
    evicted.  QCRAM employs a two-phase eviction algorithm, in which the
    encoder will not evict entries that have outstanding (unacknowledged)
-   references.  The QCRAM encoder maintains a counter as entries are
-   evicted, which is the cumulative number of evictions so far,
-   "Evictions" (Section 3.2).  On arrival at the decoder, if "Evictions"
-   is higher than previously seen, the decoder MUST evict the
-   appropriate number of entries.  Unlike HPACK, where the decoder
-   follows the same logic as the encoder to perform evictions, in QCRAM
-   the decoder evicts exclusively based on the encoder's explicit
-   guidance.
+   references.
+
+
+
+
+
+
+
+
+Krasic                    Expires July 27, 2018                 [Page 6]
+
+Internet-Draft                    QCRAM                     January 2018
+
 
 3.4.1.  Blocked Evictions
 
@@ -386,14 +365,6 @@ Internet-Draft                    QCRAM                     January 2018
 
               Figure 3: Indexed Header Field with Duplication
 
-
-
-
-Krasic                    Expires July 27, 2018                 [Page 7]
-
-Internet-Draft                    QCRAM                     January 2018
-
-
    _Indexed-Duplicates_ insert a new entry into the dynamic table which
    duplicates an existing entry.  [RFC7541] allows duplicate HPACK table
    entries, that is entries that have the same name and value.
@@ -401,19 +372,6 @@ Internet-Draft                    QCRAM                     January 2018
    This replaces the HPACK instruction for Dynamic Table Size Update
    (see Section 6.3 of [RFC7541], which is not supported by HTTP over
    QUIC.
-
-3.5.1.  Mandatory Entry De-duplication
-
-   To help mitigate memory consumption due to duplicate entries, HPACK
-   for QCRAM is required to de-duplicate strings in the dynamic table.
-   The table insertion logic should check if the new entry matches any
-   existing entries (name and value), and if so, table accounting MUST
-   charge only the overhead portion ([RFC7541] Section 4.1) to the new
-   entry.
-
-   Specific de-duplication mechanisms are left to implementations, but
-   using a map in conjunction with reference counted pointers to strings
-   would be typical.
 
 4.  Performance considerations
 
@@ -427,12 +385,21 @@ Internet-Draft                    QCRAM                     January 2018
    (Section 3.2), ensuring they have small indices and hence minimal
    size on the wire.
 
+
+
+
+
+Krasic                    Expires July 27, 2018                 [Page 7]
+
+Internet-Draft                    QCRAM                     January 2018
+
+
 4.2.  Fixed overhead.
 
    HPACK defines overhead as 32 bytes ([RFC7541] Section 4.1).  QCRAM
    adds some per-entry state, to track acknowledgment status and
-   eviction reference count, and requires mechanisms to de-duplicate
-   strings.  A larger value than 32 might be more accurate for QCRAM.
+   eviction reference count.  A larger value than 32 might be more
+   accurate for QCRAM.
 
 4.3.  Co-ordinated Packetization
 
@@ -442,14 +409,6 @@ Internet-Draft                    QCRAM                     January 2018
    literal.  An implementation could attempt to exploit this exception
    by employing co-ordination between QCRAM compression and QUIC
    transport packetization.  However, if the packet is lost, the
-
-
-
-Krasic                    Expires July 27, 2018                 [Page 8]
-
-Internet-Draft                    QCRAM                     January 2018
-
-
    transport might choose a different packetization when retransmitting
    the missing data.
 
@@ -480,6 +439,17 @@ Internet-Draft                    QCRAM                     January 2018
 
    o  Ryan Hamilton
 
+
+
+
+
+
+
+Krasic                    Expires July 27, 2018                 [Page 8]
+
+Internet-Draft                    QCRAM                     January 2018
+
+
 8.  References
 
 8.1.  Normative References
@@ -494,17 +464,6 @@ Internet-Draft                    QCRAM                     January 2018
               <https://www.rfc-editor.org/info/rfc7541>.
 
 8.2.  Informative References
-
-
-
-
-
-
-
-Krasic                    Expires July 27, 2018                 [Page 9]
-
-Internet-Draft                    QCRAM                     January 2018
-
 
    [QUIC-TRANSPORT]
               Iyengar, J. and M. Thomson, "QUIC: A UDP-Based Multiplexed
@@ -542,19 +501,4 @@ Author's Address
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Krasic                    Expires July 27, 2018                [Page 10]
+Krasic                    Expires July 27, 2018                 [Page 9]

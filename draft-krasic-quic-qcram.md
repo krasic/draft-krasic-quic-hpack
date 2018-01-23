@@ -1,7 +1,7 @@
 ---
 title: Header Compression for HTTP over QUIC
 abbrev: QCRAM
-docname: draft-krasic-quic-qcram-03
+docname: draft-krasic-quic-qcram-latest
 date: {DATE}
 category: std
 ipr: trust200902

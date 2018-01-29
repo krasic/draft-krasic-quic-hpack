@@ -564,7 +564,7 @@ address {
 <h3 id="rfc.section.4.2.2">
 <a href="#rfc.section.4.2.2">4.2.2.</a> <a href="#safe-evictions" id="safe-evictions">Safe evictions</a>
 </h3>
-<p id="rfc.section.4.2.2.p.1">Section <a href="#evictions" class="xref">Section 3.4</a> describes how QCRAM avoids invalid references that might result from out-of-order delivery.  When the encoder processes a HEADER_ACK, it dereferences table entries that were indexed in the acknowledged header.  To track which entries must be dereferenced, it can maintain a map from unacknowledged headers to lists of (absolute) indices.  The simplest place to store the actual reference count might be the table entries.  However, in practice the number of entries in the table with a non-zero reference count is likely to stay quite small, so a separate data structure tracking entries with non-zero reference counts, separate from the main header table, could be more space efficient.</p>
+<p id="rfc.section.4.2.2.p.1">Section <a href="#evictions" class="xref">Section 3.4</a> describes how QCRAM avoids invalid references that might result from out-of-order delivery.  When the encoder processes a HEADER_ACK, it dereferences table entries that were indexed in the acknowledged header.  To track which entries must be dereferenced, it can maintain a map from unacknowledged headers to lists of (absolute) indices.  The simplest place to store the actual reference count might be the table entries.  In practice the number of entries in the table with a non-zero reference count is likely to stay quite small.  A data structure tracking only entries with non-zero reference counts, separate from the main header table, could be more space efficient.</p>
 <h3 id="rfc.section.4.2.3">
 <a href="#rfc.section.4.2.3">4.2.3.</a> <a href="#decoder-blocking" id="decoder-blocking">Decoder Blocking</a>
 </h3>
@@ -591,11 +591,13 @@ address {
 
 <ul>
 <li>Mike Bishop</li>
-<li>Patrick McManus</li>
-<li>Biren Roy</li>
 <li>Alan Frindell</li>
-<li>Ian Swett</li>
 <li>Ryan Hamilton</li>
+<li>Patrick McManus</li>
+<li>Kazuho Oku</li>
+<li>Biren Roy</li>
+<li>Ian Swett</li>
+<li>Dmitri Tikhonov</li>
 </ul>
 <h1 id="rfc.references">
 <a href="#rfc.references">8.</a> References</h1>

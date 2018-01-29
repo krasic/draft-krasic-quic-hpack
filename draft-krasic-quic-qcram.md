@@ -312,7 +312,7 @@ and hence minimal size on the wire.
 
 For header blocks encoded in non-blocking mode, the encoder needs to forego
 indexed representations that refer to vulnerable entries (see
-{{overview-hol-avoidance}}.  A implementation could extend the header table
+{{overview-hol-avoidance}}).  An implementation could extend the header table
 entry with a boolean to track vulnerability.  However, the number of entries in
 the table that are vulnerable is likely to be small in practice, much less than
 the total number of entries, so a data tracking only vulnerable

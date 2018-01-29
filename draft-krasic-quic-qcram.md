@@ -101,7 +101,7 @@ might not be processed on arrival.
 
 The header block contains a prefix ({{absolute-index}}). This prefix contains
 table offset information that establishes total ordering among all headers,
-regardless of reordering in the transport (see {{overview-absolute}}).  
+regardless of reordering in the transport (see {{overview-absolute}}).
 
 In blocking mode, the prefix additionally identifies the minimum state required
 to process any vulnerable references in the header block (see `Depends Index` in
@@ -326,11 +326,10 @@ result from out-of-order delivery.  When the encoder processes a HEADER_ACK, it
 dereferences table entries that were indexed in the acknowledged header.  To
 track which entries must be dereferenced, it can maintain a map from
 unacknowledged headers to lists of (absolute) indices.  The simplest place to
-store the actual reference count might be the table entries.  However, in
-practice the number of entries in the table with a non-zero reference count is
-likely to stay quite small, so a separate data structure tracking entries with
-non-zero reference counts, separate from the main header table, could be more
-space efficient.
+store the actual reference count might be the table entries.  In practice the
+number of entries in the table with a non-zero reference count is likely to stay
+quite small.  A data structure tracking only entries with non-zero reference
+counts, separate from the main header table, could be more space efficient.
 
 ### Decoder Blocking
 
@@ -377,14 +376,18 @@ those authors is gratefully acknowledged, as well as ideas from:
 
 * Mike Bishop
 
+* Alan Frindell
+
+* Ryan Hamilton
+
 * Patrick McManus
+
+* Kazuho Oku
 
 * Biren Roy
 
-* Alan Frindell
-
 * Ian Swett
 
-* Ryan Hamilton
+* Dmitri Tikhonov
 
 

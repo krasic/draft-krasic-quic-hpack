@@ -108,8 +108,8 @@ to process any vulnerable references in the header block (see `Depends Index` in
 {{overview-absolute}}).  The decoder keeps track of which entries have been
 added to its dynamic table.  The stream for a header with BLOCKING flag set is
 considered blocked by the decoder and can not be processed until all entries in
-the range `[1, Depends Index]` have been added.  While blocked, HB's header
-field data MUST remain in stream B's flow control window.
+the range `[1, Depends Index]` have been added.  While blocked, header
+field data MUST remain in the blocked stream's flow control window.
 
 # HTTP over QUIC mapping extensions {#hq-frames}
 
@@ -156,14 +156,16 @@ The HEADER_ACK frame does not define any flags.
 
 ## Allowed Instructions
 
+
 HEADERS frames on the Control Stream SHOULD contain only Literal with
-Incremental Indexing representations.  Frames on this stream modify the
-dynamic table state without generating output to any particular request.
+Incremental Indexing and Indexed with Duplication (see {{indexed-duplicate}})
+representations.  Frames on this stream modify the dynamic table state
+without generating output to any particular request.
 
 HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain
-Literal with Incremental Indexing representations.  Frames on these streams
-reference the dynamic table in a particular state without modifying it, but emit
-the headers for an HTTP request or response.
+Literal with Incremental Indexing and Indexed with Duplication representations.
+Frames on these streams reference the dynamic table in a particular state
+without modifying it, but emit the headers for an HTTP request or response.
 
 ## Header Block Prefix {#absolute-index}
 
@@ -232,13 +234,12 @@ indices:
 relative index = baseIndex - entry.absoluteIndex + staticTable.size
 ```
 
-As header blocks on request and push streams do not contain insertions, the
-`baseIndex` is the same for all representations they contain.  However, indexed
-representations are sent on request and push streams, so the value of
-`baseIndex` can not be synchronized implicitly.  Instead then, QCRAM sends
-encoder's `Base Index` explicitly as part of the prefix (see
-{{absolute-index}}), so that the decoder can compute the same absolute indices
-that the encoder used:
+Header blocks on request and push streams do not modify the dynamic table state,
+so they never change the `baseIndex`.  However, since ordering between streams
+is not guaranteed, the value of `baseIndex` can not be synchronized implicitly.
+Instead then, QCRAM sends encoder's `Base Index` explicitly as part of the
+prefix (see {{absolute-index}}), so that the decoder can compute the same
+absolute indices that the encoder used:
 
 ```
 absoluteIndex = prefix.baseIndex + staticTable.size - relativeIndex;
@@ -312,7 +313,7 @@ and hence minimal size on the wire.
 For header blocks encoded in non-blocking mode, the encoder needs to forego
 indexed representations that refer to vulnerable entries (see
 {{overview-hol-avoidance}}.  A implementation could extend the header table
-entry with a boolean to track vulnerability.  However, the numer of entries in
+entry with a boolean to track vulnerability.  However, the number of entries in
 the table that are vulnerable is likely to be small in practice, much less than
 the total number of entries, so a data tracking only vulnerable
 (un-acknowledged) entries, separate from the main header table, might be more
@@ -347,8 +348,8 @@ size M is the number of sub-ranges. In practice M would be very small, as most
 table entries would be concentrated in the first sub-range [1, M].
 
 To track blocked streams, an ordered map (e.g. multi-map) from `Depends Index`
-values to streams can be used.  Whenever the decoder processs a header block, it
-can drain any members of the blockeds streams map that have `Depends Index <= M`
+values to streams can be used.  Whenever the decoder processes a header block, it
+can drain any members of the blocked streams map that have `Depends Index <= M`
 where `[1,M]` is the first member of the added- entries sub-ranges set.  Again,
 the complexity of operations would be at most O(log N), N being the number
 of concurrently blocked streams.

@@ -429,7 +429,7 @@ Internet-Draft                    QCRAM                     January 2018
 
    For header blocks encoded in non-blocking mode, the encoder needs to
    forego indexed representations that refer to vulnerable entries (see
-   Section 1.2.  A implementation could extend the header table entry
+   Section 1.2).  An implementation could extend the header table entry
    with a boolean to track vulnerability.  However, the number of
    entries in the table that are vulnerable is likely to be small in
    practice, much less than the total number of entries, so a data

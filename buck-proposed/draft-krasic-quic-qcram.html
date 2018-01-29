@@ -560,7 +560,7 @@ address {
 <h3 id="rfc.section.4.2.1">
 <a href="#rfc.section.4.2.1">4.2.1.</a> <a href="#vulnerable-entries" id="vulnerable-entries">Vulnerable Entries</a>
 </h3>
-<p id="rfc.section.4.2.1.p.1">For header blocks encoded in non-blocking mode, the encoder needs to forego indexed representations that refer to vulnerable entries (see <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>.  A implementation could extend the header table entry with a boolean to track vulnerability.  However, the number of entries in the table that are vulnerable is likely to be small in practice, much less than the total number of entries, so a data tracking only vulnerable (un-acknowledged) entries, separate from the main header table, might be more space efficient.</p>
+<p id="rfc.section.4.2.1.p.1">For header blocks encoded in non-blocking mode, the encoder needs to forego indexed representations that refer to vulnerable entries (see <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>).  An implementation could extend the header table entry with a boolean to track vulnerability.  However, the number of entries in the table that are vulnerable is likely to be small in practice, much less than the total number of entries, so a data tracking only vulnerable (un-acknowledged) entries, separate from the main header table, might be more space efficient.</p>
 <h3 id="rfc.section.4.2.2">
 <a href="#rfc.section.4.2.2">4.2.2.</a> <a href="#safe-evictions" id="safe-evictions">Safe evictions</a>
 </h3>

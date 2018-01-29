@@ -297,8 +297,11 @@ address {
 <link href="#rfc.section.3.5" rel="Chapter" title="3.5 Refreshing Entries with Duplication">
 <link href="#rfc.section.4" rel="Chapter" title="4 Performance considerations">
 <link href="#rfc.section.4.1" rel="Chapter" title="4.1 Speculative table updates">
-<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Fixed overhead.">
-<link href="#rfc.section.4.3" rel="Chapter" title="4.3 Co-ordinated Packetization">
+<link href="#rfc.section.4.2" rel="Chapter" title="4.2 Additional state beyond HPACK.">
+<link href="#rfc.section.4.2.1" rel="Chapter" title="4.2.1 Vulnerable Entries">
+<link href="#rfc.section.4.2.2" rel="Chapter" title="4.2.2 Safe evictions">
+<link href="#rfc.section.4.2.3" rel="Chapter" title="4.2.3 Decoder Blocking">
+<link href="#rfc.section.4.2.4" rel="Chapter" title="4.2.4 Fixed overhead.">
 <link href="#rfc.section.5" rel="Chapter" title="5 Security Considerations">
 <link href="#rfc.section.6" rel="Chapter" title="6 IANA Considerations">
 <link href="#rfc.section.7" rel="Chapter" title="7 Acknowledgments">
@@ -308,12 +311,12 @@ address {
 <link href="#rfc.authors" rel="Chapter">
 
 
-  <meta name="generator" content="xml2rfc version 2.8.3 - https://tools.ietf.org/tools/xml2rfc" />
+  <meta name="generator" content="xml2rfc version 2.8.5 - https://tools.ietf.org/tools/xml2rfc" />
   <link rel="schema.dct" href="http://purl.org/dc/terms/" />
 
   <meta name="dct.creator" content="Krasic, C." />
   <meta name="dct.identifier" content="urn:ietf:id:draft-krasic-quic-qcram-latest" />
-  <meta name="dct.issued" scheme="ISO8601" content="2018-1-23" />
+  <meta name="dct.issued" scheme="ISO8601" content="2018-1-29" />
   <meta name="dct.abstract" content="The design of the core QUIC transport subsumes many HTTP/2 features, prominent among them stream multiplexing.  A key advantage of the QUIC transport is stream multiplexing free of head-of-line (HoL) blocking between streams. In HTTP/2, multiplexed streams can suffer HoL blocking due to TCP." />
   <meta name="description" content="The design of the core QUIC transport subsumes many HTTP/2 features, prominent among them stream multiplexing.  A key advantage of the QUIC transport is stream multiplexing free of head-of-line (HoL) blocking between streams. In HTTP/2, multiplexed streams can suffer HoL blocking due to TCP." />
 
@@ -334,10 +337,10 @@ address {
 </tr>
 <tr>
 <td class="left">Intended status: Standards Track</td>
-<td class="right">January 23, 2018</td>
+<td class="right">January 29, 2018</td>
 </tr>
 <tr>
-<td class="left">Expires: July 27, 2018</td>
+<td class="left">Expires: August 2, 2018</td>
 <td class="right"></td>
 </tr>
 
@@ -355,7 +358,7 @@ address {
 <p>This Internet-Draft is submitted in full conformance with the provisions of BCP 78 and BCP 79.</p>
 <p>Internet-Drafts are working documents of the Internet Engineering Task Force (IETF).  Note that other groups may also distribute working documents as Internet-Drafts.  The list of current Internet-Drafts is at https://datatracker.ietf.org/drafts/current/.</p>
 <p>Internet-Drafts are draft documents valid for a maximum of six months and may be updated, replaced, or obsoleted by other documents at any time.  It is inappropriate to use Internet-Drafts as reference material or to cite them other than as "work in progress."</p>
-<p>This Internet-Draft will expire on July 27, 2018.</p>
+<p>This Internet-Draft will expire on August 2, 2018.</p>
 <h1 id="rfc.copyrightnotice"><a href="#rfc.copyrightnotice">Copyright Notice</a></h1>
 <p>Copyright (c) 2018 IETF Trust and the persons identified as the document authors.  All rights reserved.</p>
 <p>This document is subject to BCP 78 and the IETF Trust's Legal Provisions Relating to IETF Documents (https://trustee.ietf.org/license-info) in effect on the date of publication of this document.  Please review these documents carefully, as they describe your rights and restrictions with respect to this document.  Code Components extracted from this document must include Simplified BSD License text as described in Section 4.e of the Trust Legal Provisions and are provided without warranty as described in the Simplified BSD License.</p>
@@ -395,11 +398,17 @@ address {
 </li>
 <ul><li>4.1.   <a href="#rfc.section.4.1">Speculative table updates</a>
 </li>
-<li>4.2.   <a href="#rfc.section.4.2">Fixed overhead.</a>
+<li>4.2.   <a href="#rfc.section.4.2">Additional state beyond HPACK.</a>
 </li>
-<li>4.3.   <a href="#rfc.section.4.3">Co-ordinated Packetization</a>
+<ul><li>4.2.1.   <a href="#rfc.section.4.2.1">Vulnerable Entries</a>
 </li>
-</ul><li>5.   <a href="#rfc.section.5">Security Considerations</a>
+<li>4.2.2.   <a href="#rfc.section.4.2.2">Safe evictions</a>
+</li>
+<li>4.2.3.   <a href="#rfc.section.4.2.3">Decoder Blocking</a>
+</li>
+<li>4.2.4.   <a href="#rfc.section.4.2.4">Fixed overhead.</a>
+</li>
+</ul></ul><li>5.   <a href="#rfc.section.5">Security Considerations</a>
 </li>
 <li>6.   <a href="#rfc.section.6">IANA Considerations</a>
 </li>
@@ -436,7 +445,8 @@ address {
 <p id="rfc.section.1.2.p.2">The encoder can choose on a per-header-block basis whether to favor higher compression ratio (by permitting vulnerable references) or HoL resilience (by avoiding them). This is signaled by the BLOCKING flag in HEADERS and PUSH_PROMISE frames (see <a href="#hq-frames" class="xref">Section 2</a>).</p>
 <p id="rfc.section.1.2.p.3">If a header block contains no vulnerable header fields, BLOCKING MUST be 0.  This implies that the header fields are represented either as references to dynamic table entries which are known to have been received, or as Literal header fields (see <a href="#RFC7541" class="xref">[RFC7541]</a> Section 6.2).</p>
 <p id="rfc.section.1.2.p.4">If a header block contains any header field which references dynamic table state which the peer might not have received yet, the BLOCKING flag MUST be set.  If the peer does not yet have the appropriate state, such blocks might not be processed on arrival.</p>
-<p id="rfc.section.1.2.p.5">The header block contains a prefix (<a href="#absolute-index" class="xref">Section 3.2</a>). This prefix contains table offset information that establishes total ordering among all headers, regardless of reordering in the transport (see <a href="#overview-absolute" class="xref">Section 3.3</a>).  In blocking mode, the prefix additionally identifies the minimum state required to process any vulnerable references in the header block (see <samp>Depends</samp> in Section <a href="#overview-absolute" class="xref">Section 3.3</a>).  When the necessary state has arrived, the header block can be processed. Notice that while blocked, HB&#8217;s header field data remains in stream B&#8217;s flow control window.</p>
+<p id="rfc.section.1.2.p.5">The header block contains a prefix (<a href="#absolute-index" class="xref">Section 3.2</a>). This prefix contains table offset information that establishes total ordering among all headers, regardless of reordering in the transport (see <a href="#overview-absolute" class="xref">Section 3.3</a>).</p>
+<p id="rfc.section.1.2.p.6">In blocking mode, the prefix additionally identifies the minimum state required to process any vulnerable references in the header block (see <samp>Depends Index</samp> in <a href="#overview-absolute" class="xref">Section 3.3</a>).  The decoder keeps track of which entries have been added to its dynamic table.  The stream for a header with BLOCKING flag set is considered blocked by the decoder and can not be processed until all entries in the range <samp>[1, Depends Index]</samp> have been added.  While blocked, header field data MUST remain in the blocked stream&#8217;s flow control window.</p>
 <h1 id="rfc.section.2">
 <a href="#rfc.section.2">2.</a> <a href="#hq-frames" id="hq-frames">HTTP over QUIC mapping extensions</a>
 </h1>
@@ -450,13 +460,12 @@ address {
 <dt>BLOCKING (0x01):</dt>
 <dd style="margin-left: 8">Indicates the stream might need to wait for dependent headers before processing.  If 0, the frame can be processed immediately upon receipt.</dd>
 </dl>
-<p id="rfc.section.2.1.p.3">HEADERS frames can be sent on the Connection Control Stream as well as on request / push streams.</p>
+<p id="rfc.section.2.1.p.3">HEADERS frames can be sent on the Connection Control Stream as well as on request / push streams.  The value of BLOCKING MUST be 0 for HEADERS frames on the Connection Control Stream, since they can only depend on previous HEADERS on the same stream.</p>
 <h2 id="rfc.section.2.2">
 <a href="#rfc.section.2.2">2.2.</a> <a href="#headerack" id="headerack">HEADER_ACK</a>
 </h2>
-<p id="rfc.section.2.2.p.1">The HEADER_ACK frame (type=0x8) is sent from the decoder to the encoder on the Control Stream when the decoder has fully processed a header block.  It is used by the encoder to determine whether subsequent indexed representations that might reference that block are vulnerable to HoL blocking.</p>
-<p id="rfc.section.2.2.p.2">The HEADER_ACK frame indicates the stream on which the header block was processed by encoding the Stream ID as a variable-length integer. The same Stream ID can be identified multiple times, as multiple header-containing blocks can be sent on a single stream in the case of intermediate responses, trailers, pushed requests, etc. as well as on the Control Streams.</p>
-<p id="rfc.section.2.2.p.3">Since header frames on each stream are received and processed in order, this gives the encoder precise feedback on which header blocks within a stream have been fully processed.  This information can then be used to correctly track outstanding stream references to checkpoints.</p>
+<p id="rfc.section.2.2.p.1">The HEADER_ACK frame (type=0x8) is sent from the decoder to the encoder on the Control Stream when the decoder has fully processed a header block.  It is used by the encoder to determine whether subsequent indexed representations that might reference that block are vulnerable to HoL blocking, and to prevent eviction races (see <a href="#evictions" class="xref">Section 3.4</a>).</p>
+<p id="rfc.section.2.2.p.2">The HEADER_ACK frame indicates the stream on which the header block was processed by encoding the Stream ID as a variable-length integer. The same Stream ID can be identified multiple times, as multiple header-containing blocks can be sent on a single stream in the case of intermediate responses, trailers, pushed requests, etc. as well as on the Control Streams.  Since header frames on each stream are received and processed in order, this gives the encoder precise feedback on which header blocks within a stream have been fully processed.</p>
 <pre>
   0   1   2   3   4   5   6   7
 +---+---+---+---+---+---+---+---+
@@ -464,19 +473,19 @@ address {
 +---+---------------------------+
 </pre>
 <p class="figure">HEADER_ACK frame</p>
-<p id="rfc.section.2.2.p.4">The HEADER_ACK frame does not define any flags.</p>
+<p id="rfc.section.2.2.p.3">The HEADER_ACK frame does not define any flags.</p>
 <h1 id="rfc.section.3">
 <a href="#rfc.section.3">3.</a> <a href="#hpack-extensions" id="hpack-extensions">HPACK extensions</a>
 </h1>
 <h2 id="rfc.section.3.1">
 <a href="#rfc.section.3.1">3.1.</a> <a href="#allowed-instructions" id="allowed-instructions">Allowed Instructions</a>
 </h2>
-<p id="rfc.section.3.1.p.1">HEADERS frames on the Control Streams SHOULD contain only Literal with Incremental Indexing representations.  Frames on this stream modify the dynamic table state without generating output to any particular request.</p>
-<p id="rfc.section.3.1.p.2">HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain Literal with Incremental Indexing representations.  Frames on these streams reference the dynamic table in a particular state without modifying it, but emit the headers for an HTTP request or response.</p>
+<p id="rfc.section.3.1.p.1">HEADERS frames on the Control Stream SHOULD contain only Literal with Incremental Indexing and Indexed with Duplication (see <a href="#indexed-duplicate" class="xref">Section 3.5</a>) representations.  Frames on this stream modify the dynamic table state without generating output to any particular request.</p>
+<p id="rfc.section.3.1.p.2">HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain Literal with Incremental Indexing and Indexed with Duplication representations.  Frames on these streams reference the dynamic table in a particular state without modifying it, but emit the headers for an HTTP request or response.</p>
 <h2 id="rfc.section.3.2">
 <a href="#rfc.section.3.2">3.2.</a> <a href="#absolute-index" id="absolute-index">Header Block Prefix</a>
 </h2>
-<p id="rfc.section.3.2.p.1">In HEADERS and PUSH_PROMISE frames, HPACK Header data is prefixed by an integer: <samp>Base Index</samp>.  <samp>Base index</samp> is the cumulative number of entries added to the table prior to encoding the current block, it is encoded as a single 8-bit prefix integer:</p>
+<p id="rfc.section.3.2.p.1">For request and push promise streams, in HEADERS and PUSH_PROMISE frames, HPACK Header data is prefixed by an integer: <samp>Base Index</samp>.  <samp>Base index</samp> is the cumulative number of entries added to the dynamic table prior to encoding the current block, including any entries already evicted.  It is encoded as a single 8-bit prefix integer:</p>
 <div id="rfc.figure.1"></div>
 <div id="fig-base-index"></div>
 <pre>
@@ -499,13 +508,21 @@ address {
    +---------------+
 </pre>
 <p class="figure">Figure 2: Absolute indexing (BLOCKING=0x1)</p>
-<p id="rfc.section.3.2.p.4">Depends is used to identify header dependencies, namely the largest table entry referred to by indexed representations within the following header block.  Its usage is described in <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>.  The largest index referenced is <samp>Base Index - Depends</samp>.</p>
+<p id="rfc.section.3.2.p.4">Depends is used to identify header dependencies (see <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>).  The encoder computes a value <samp>Depends Index</samp> which is the largest (absolute) index referenced by the following header block.  To help keep the prefix smaller, <samp>Depends Index</samp> is converted to a relative value: <samp>Depends = Base Index - Depends Index</samp>.</p>
 <h2 id="rfc.section.3.3">
 <a href="#rfc.section.3.3">3.3.</a> <a href="#overview-absolute" id="overview-absolute">Hybrid absolute-relative indexing</a>
 </h2>
 <p id="rfc.section.3.3.p.1">HPACK indexed entries refer to an entry by its current position in the dynamic table.  As Figure 1 of <a href="#RFC7541" class="xref">[RFC7541]</a> illustrates, newer entries have smaller indices, and older entries are evicted first if the table is full.  Under this scheme, each insertion to the table causes the index of all existing entries to change (implicitly).  Implicit index updates are acceptable for HTTP/2 because TCP is totally ordered, but are problematic in the out-of-order context of QUIC.</p>
-<p id="rfc.section.3.3.p.2">QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in <a href="#absolute-index" class="xref">Section 3.2</a> is used by the decoder to interpret all subsequent HPACK instructions at absolute positions for indexed lookups and insertions.</p>
-<p id="rfc.section.3.3.p.3">Since QCRAM handles blocking at the header block level, it is an error if the HPACK decoder encounters an indexed representation that refers to an entry missing from the table, and the connection MUST be closed with the <samp>HTTP_HPACK_DECOMPRESSION_FAILED</samp> error code.</p>
+<p id="rfc.section.3.3.p.2">QCRAM uses a hybrid absolute-relative indexing approach.</p>
+<p id="rfc.section.3.3.p.3">When the encoder adds a new entry to its header table, it can compute an absolute index:</p>
+<p><samp>entry.absoluteIndex = baseIndex++; </samp></p>
+<p id="rfc.section.3.3.p.5">Since literals with indexing are only sent on the control stream, the decoder can be guaranteed to compute the same absolute index values when it adds corresponding entries to its table, just as in HPACK and HTTP/2.</p>
+<p id="rfc.section.3.3.p.6">When encoding indexed representations, the following holds for (relative) HPACK indices:</p>
+<p><samp>relative index = baseIndex - entry.absoluteIndex + staticTable.size </samp></p>
+<p id="rfc.section.3.3.p.8">Header blocks on request and push streams do not modify the dynamic table state, so they never change the <samp>baseIndex</samp>.  However, since ordering between streams is not guaranteed, the value of <samp>baseIndex</samp> can not be synchronized implicitly.  Instead then, QCRAM sends encoder&#8217;s <samp>Base Index</samp> explicitly as part of the prefix (see <a href="#absolute-index" class="xref">Section 3.2</a>), so that the decoder can compute the same absolute indices that the encoder used:</p>
+<p><samp>absoluteIndex = prefix.baseIndex + staticTable.size - relativeIndex; </samp></p>
+<p id="rfc.section.3.3.p.10">In this way, even if request or push stream headers are decoded in a different order than encoded, the absolute indices will still identify the correct table entries.</p>
+<p id="rfc.section.3.3.p.11">It is an error if the HPACK decoder encounters an indexed representation that refers to an entry missing from the table, and the connection MUST be closed with the <samp>HTTP_HPACK_DECOMPRESSION_FAILED</samp> error code.</p>
 <h2 id="rfc.section.3.4">
 <a href="#rfc.section.3.4">3.4.</a> <a href="#evictions" id="evictions">Preventing Eviction Races</a>
 </h2>
@@ -513,7 +530,7 @@ address {
 <h3 id="rfc.section.3.4.1">
 <a href="#rfc.section.3.4.1">3.4.1.</a> <a href="#blocked-evictions" id="blocked-evictions">Blocked Evictions</a>
 </h3>
-<p id="rfc.section.3.4.1.p.1">The decoder MUST NOT permit an entry to be evicted while a reference to that entry remains unacknowledged.  If a new header to be inserted into the dynamic table would cause the eviction of such an entry, the encoder MUST NOT emit the insert instruction until the reference has been processed by the decoder and acknowledged.</p>
+<p id="rfc.section.3.4.1.p.1">The encoder MUST NOT permit an entry to be evicted while a reference to that entry remains unacknowledged.  If a new header to be inserted into the dynamic table would cause the eviction of such an entry, the encoder MUST NOT emit the insert instruction until the reference has been processed by the decoder and acknowledged.</p>
 <p id="rfc.section.3.4.1.p.2">The encoder can emit a literal representation for the new header in order to avoid encoding delays, and MAY insert the header into the table later if desired.</p>
 <p id="rfc.section.3.4.1.p.3">To ensure that the blocked eviction case is rare, references to the oldest entries in the dynamic table SHOULD be avoided.  When one of the oldest entries in the table is still actively used for references, the encoder SHOULD emit an Indexed-Duplicate representation instead (see <a href="#indexed-duplicate" class="xref">Section 3.5</a>).</p>
 <h2 id="rfc.section.3.5">
@@ -538,13 +555,26 @@ address {
 </h2>
 <p id="rfc.section.4.1.p.1">Implementations can <em>speculatively</em> send header frames on the HTTP Control Streams which are not needed for any current HTTP request or response.  Such headers could be used strategically to improve performance.  For instance, the encoder might decide to <em>refresh</em> by sending Indexed-Duplicate representations for popular header fields (<a href="#absolute-index" class="xref">Section 3.2</a>), ensuring they have small indices and hence minimal size on the wire.</p>
 <h2 id="rfc.section.4.2">
-<a href="#rfc.section.4.2">4.2.</a> <a href="#fixed-overhead" id="fixed-overhead">Fixed overhead.</a>
+<a href="#rfc.section.4.2">4.2.</a> <a href="#additional-state-beyond-hpack" id="additional-state-beyond-hpack">Additional state beyond HPACK.</a>
 </h2>
-<p id="rfc.section.4.2.p.1">HPACK defines overhead as 32 bytes (<a href="#RFC7541" class="xref">[RFC7541]</a> Section 4.1).  QCRAM adds some per-entry state, to track acknowledgment status and eviction reference count.  A larger value than 32 might be more accurate for QCRAM.</p>
-<h2 id="rfc.section.4.3">
-<a href="#rfc.section.4.3">4.3.</a> <a href="#co-ordinated-packetization" id="co-ordinated-packetization">Co-ordinated Packetization</a>
-</h2>
-<p id="rfc.section.4.3.p.1">When a dynamic table entry is both defined and referenced by header blocks within the same packet, there is no risk of HoL blocking and using an indexed representation is strictly better than using a literal.  An implementation could attempt to exploit this exception by employing co-ordination between QCRAM compression and QUIC transport packetization.  However, if the packet is lost, the transport might choose a different packetization when retransmitting the missing data.</p>
+<h3 id="rfc.section.4.2.1">
+<a href="#rfc.section.4.2.1">4.2.1.</a> <a href="#vulnerable-entries" id="vulnerable-entries">Vulnerable Entries</a>
+</h3>
+<p id="rfc.section.4.2.1.p.1">For header blocks encoded in non-blocking mode, the encoder needs to forego indexed representations that refer to vulnerable entries (see <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>.  A implementation could extend the header table entry with a boolean to track vulnerability.  However, the number of entries in the table that are vulnerable is likely to be small in practice, much less than the total number of entries, so a data tracking only vulnerable (un-acknowledged) entries, separate from the main header table, might be more space efficient.</p>
+<h3 id="rfc.section.4.2.2">
+<a href="#rfc.section.4.2.2">4.2.2.</a> <a href="#safe-evictions" id="safe-evictions">Safe evictions</a>
+</h3>
+<p id="rfc.section.4.2.2.p.1">Section <a href="#evictions" class="xref">Section 3.4</a> describes how QCRAM avoids invalid references that might result from out-of-order delivery.  When the encoder processes a HEADER_ACK, it dereferences table entries that were indexed in the acknowledged header.  To track which entries must be dereferenced, it can maintain a map from unacknowledged headers to lists of (absolute) indices.  The simplest place to store the actual reference count might be the table entries.  However, in practice the number of entries in the table with a non-zero reference count is likely to stay quite small, so a separate data structure tracking entries with non-zero reference counts, separate from the main header table, could be more space efficient.</p>
+<h3 id="rfc.section.4.2.3">
+<a href="#rfc.section.4.2.3">4.2.3.</a> <a href="#decoder-blocking" id="decoder-blocking">Decoder Blocking</a>
+</h3>
+<p id="rfc.section.4.2.3.p.1">To support blocking, the decoder needs to keep track of entries it has added to the dynamic table (see <a href="#overview-hol-avoidance" class="xref">Section 1.2</a>), and it needs to track blocked streams.</p>
+<p id="rfc.section.4.2.3.p.2">Tracking added entries might be done in a brute force fashion without additional space.  However, this would have O(N) cost where N is the number of entries in the dynamic table.  Alternatively, a dedicated data structure might improve on brute force in exchange a small amount of additional space.  For example, a set of pairs (of indices), representing non-overlapping sub-ranges can be used.  Each operation (add, or query) can be done within O(log M) complexity.  Here set size M is the number of sub-ranges. In practice M would be very small, as most table entries would be concentrated in the first sub-range [1, M].</p>
+<p id="rfc.section.4.2.3.p.3">To track blocked streams, an ordered map (e.g. multi-map) from <samp>Depends Index</samp> values to streams can be used.  Whenever the decoder processes a header block, it can drain any members of the blocked streams map that have <samp>Depends Index &lt;= M</samp> where <samp>[1,M]</samp> is the first member of the added- entries sub-ranges set.  Again, the complexity of operations would be at most O(log N), N being the number of concurrently blocked streams.</p>
+<h3 id="rfc.section.4.2.4">
+<a href="#rfc.section.4.2.4">4.2.4.</a> <a href="#fixed-overhead" id="fixed-overhead">Fixed overhead.</a>
+</h3>
+<p id="rfc.section.4.2.4.p.1">HPACK defines overhead as 32 bytes (<a href="#RFC7541" class="xref">[RFC7541]</a> Section 4.1).  As described above, QCRAM adds some per-connection state, and possibly some per-entry state to track acknowledgment status and eviction reference count.  A larger value than 32 might be more accurate for QCRAM.</p>
 <h1 id="rfc.section.5">
 <a href="#rfc.section.5">5.</a> <a href="#security-considerations" id="security-considerations">Security Considerations</a>
 </h1>
@@ -575,7 +605,7 @@ address {
 <tr>
 <td class="reference"><b id="QUIC-HTTP">[QUIC-HTTP]</b></td>
 <td class="top">
-<a>Bishop, M.</a>, "<a href="https://tools.ietf.org/html/draft-ietf-quic-http-08">Hypertext Transfer Protocol (HTTP) over QUIC</a>", Internet-Draft draft-ietf-quic-http-08, December 2017.</td>
+<a>Bishop, M.</a>, "<a href="https://tools.ietf.org/html/draft-ietf-quic-http-09">Hypertext Transfer Protocol (HTTP) over QUIC</a>", Internet-Draft draft-ietf-quic-http-09, January 2018.</td>
 </tr>
 <tr>
 <td class="reference"><b id="RFC7541">[RFC7541]</b></td>
@@ -589,7 +619,7 @@ address {
 <tr>
 <td class="reference"><b id="QUIC-TRANSPORT">[QUIC-TRANSPORT]</b></td>
 <td class="top">
-<a>Iyengar, J.</a> and <a>M. Thomson</a>, "<a href="https://tools.ietf.org/html/draft-ietf-quic-transport-08">QUIC: A UDP-Based Multiplexed and Secure Transport</a>", Internet-Draft draft-ietf-quic-transport-08, December 2017.</td>
+<a>Iyengar, J.</a> and <a>M. Thomson</a>, "<a href="https://tools.ietf.org/html/draft-ietf-quic-transport-09">QUIC: A UDP-Based Multiplexed and Secure Transport</a>", Internet-Draft draft-ietf-quic-transport-09, January 2018.</td>
 </tr>
 <tr>
 <td class="reference"><b id="RFC7540">[RFC7540]</b></td>

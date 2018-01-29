@@ -101,13 +101,15 @@ might not be processed on arrival.
 
 The header block contains a prefix ({{absolute-index}}). This prefix contains
 table offset information that establishes total ordering among all headers,
-regardless of reordering in the transport (see {{overview-absolute}}).  In
-blocking mode, the prefix additionally identifies the minimum state required to
-process any vulnerable references in the header block (see `Depends` in Section
-{{overview-absolute}}).  When the necessary state has arrived, the header block
-can be processed. Notice that while blocked, HB's header field data remains in
-stream B's flow control window.
+regardless of reordering in the transport (see {{overview-absolute}}).  
 
+In blocking mode, the prefix additionally identifies the minimum state required
+to process any vulnerable references in the header block (see `Depends Index` in
+{{overview-absolute}}).  The decoder keeps track of which entries have been
+added to its dynamic table.  The stream for a header with BLOCKING flag set is
+considered blocked by the decoder and can not be processed until all entries in
+the range `[1, Depends Index]` have been added.  While blocked, header
+field data MUST remain in the blocked stream's flow control window.
 
 # HTTP over QUIC mapping extensions {#hq-frames}
 
@@ -120,25 +122,25 @@ BLOCKING (0x01):
   processing.  If 0, the frame can be processed immediately upon receipt.
 
 HEADERS frames can be sent on the Connection Control Stream as well as on
-request / push streams.
+request / push streams.  The value of BLOCKING MUST be 0 for HEADERS frames on
+the Connection Control Stream, since they can only depend on previous HEADERS on
+the same stream.
 
 ## HEADER_ACK
 
 The HEADER_ACK frame (type=0x8) is sent from the decoder to the encoder on the
 Control Stream when the decoder has fully processed a header block.  It is used
 by the encoder to determine whether subsequent indexed representations that
-might reference that block are vulnerable to HoL blocking.
+might reference that block are vulnerable to HoL blocking, and to prevent
+eviction races (see {{evictions}}).
 
 The HEADER_ACK frame indicates the stream on which the header block was
 processed by encoding the Stream ID as a variable-length integer. The same
 Stream ID can be identified multiple times, as multiple header-containing blocks
 can be sent on a single stream in the case of intermediate responses, trailers,
-pushed requests, etc. as well as on the Control Streams.
-
-Since header frames on each stream are received and processed in order, this
-gives the encoder precise feedback on which header blocks within a stream have
-been fully processed.  This information can then be used to correctly track
-outstanding stream references to checkpoints.
+pushed requests, etc. as well as on the Control Streams.  Since header frames on
+each stream are received and processed in order, this gives the encoder precise
+feedback on which header blocks within a stream have been fully processed.
 
 ~~~~~~~~~~
   0   1   2   3   4   5   6   7
@@ -154,21 +156,24 @@ The HEADER_ACK frame does not define any flags.
 
 ## Allowed Instructions
 
-HEADERS frames on the Control Streams SHOULD contain only Literal with
-Incremental Indexing representations.  Frames on this stream modify the
-dynamic table state without generating output to any particular request.
+
+HEADERS frames on the Control Stream SHOULD contain only Literal with
+Incremental Indexing and Indexed with Duplication (see {{indexed-duplicate}})
+representations.  Frames on this stream modify the dynamic table state
+without generating output to any particular request.
 
 HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT contain
-Literal with Incremental Indexing representations.  Frames on these streams
-reference the dynamic table in a particular state without modifying it, but emit
-the headers for an HTTP request or response.
+Literal with Incremental Indexing and Indexed with Duplication representations.
+Frames on these streams reference the dynamic table in a particular state
+without modifying it, but emit the headers for an HTTP request or response.
 
 ## Header Block Prefix {#absolute-index}
 
-In HEADERS and PUSH_PROMISE frames, HPACK Header data is prefixed by an integer:
-`Base Index`.  `Base index` is the cumulative number of entries added to the
-table prior to encoding the current block, it is encoded as a single 8-bit
-prefix integer:
+For request and push promise streams, in HEADERS and PUSH_PROMISE frames, HPACK
+Header data is prefixed by an integer: `Base Index`.  `Base index` is the
+cumulative number of entries added to the dynamic table prior to encoding the
+current block, including any entries already evicted.  It is encoded as a single
+8-bit prefix integer:
 
 ~~~~~~~~~~  drawing
     0 1 2 3 4 5 6 7
@@ -193,10 +198,11 @@ integer (8-bit prefix) 'Depends':
 ~~~~~~~~~~
 {:#fig-prefix-long title="Absolute indexing (BLOCKING=0x1)"}
 
-Depends is used to identify header dependencies, namely the largest table entry
-referred to by indexed representations within the following header block.  Its
-usage is described in {{overview-hol-avoidance}}.  The largest index referenced
-is `Base Index - Depends`.
+Depends is used to identify header dependencies (see
+{{overview-hol-avoidance}}).  The encoder computes a value `Depends Index` which
+is the largest (absolute) index referenced by the following header block.  To
+help keep the prefix smaller, `Depends Index` is converted to a relative value:
+`Depends = Base Index - Depends Index`.
 
 ## Hybrid absolute-relative indexing {#overview-absolute}
 
@@ -208,14 +214,44 @@ change (implicitly).  Implicit index updates are acceptable for HTTP/2 because
 TCP is totally ordered, but are problematic in the out-of-order context of
 QUIC.
 
-QCRAM uses a hybrid absolute-relative indexing approach.  The prefix defined in
-{{absolute-index}} is used by the decoder to interpret all subsequent HPACK
-instructions at absolute positions for indexed lookups and insertions.
+QCRAM uses a hybrid absolute-relative indexing approach.
 
-Since QCRAM handles blocking at the header block level, it is an error if the
-HPACK decoder encounters an indexed representation that refers to an entry
-missing from the table, and the connection MUST be closed with the
-`HTTP_HPACK_DECOMPRESSION_FAILED` error code.
+When the encoder adds a new entry to its header table, it can compute
+an absolute index:
+
+```
+entry.absoluteIndex = baseIndex++;
+```
+
+Since literals with indexing are only sent on the control stream, the decoder
+can be guaranteed to compute the same absolute index values when it adds
+corresponding entries to its table, just as in HPACK and HTTP/2.
+
+When encoding indexed representations, the following holds for (relative) HPACK
+indices:
+
+```
+relative index = baseIndex - entry.absoluteIndex + staticTable.size
+```
+
+Header blocks on request and push streams do not modify the dynamic table state,
+so they never change the `baseIndex`.  However, since ordering between streams
+is not guaranteed, the value of `baseIndex` can not be synchronized implicitly.
+Instead then, QCRAM sends encoder's `Base Index` explicitly as part of the
+prefix (see {{absolute-index}}), so that the decoder can compute the same
+absolute indices that the encoder used:
+
+```
+absoluteIndex = prefix.baseIndex + staticTable.size - relativeIndex;
+```
+
+In this way, even if request or push stream headers are decoded in a different
+order than encoded, the absolute indices will still identify the correct table
+entries.
+
+It is an error if the HPACK decoder encounters an indexed representation that
+refers to an entry missing from the table, and the connection MUST be closed
+with the `HTTP_HPACK_DECOMPRESSION_FAILED` error code.
 
 ## Preventing Eviction Races {#evictions}
 
@@ -227,7 +263,7 @@ have outstanding (unacknowledged) references.
 
 ### Blocked Evictions
 
-The decoder MUST NOT permit an entry to be evicted while a reference to that
+The encoder MUST NOT permit an entry to be evicted while a reference to that
 entry remains unacknowledged.  If a new header to be inserted into the dynamic
 table would cause the eviction of such an entry, the encoder MUST NOT emit the
 insert instruction until the reference has been processed by the decoder and
@@ -270,21 +306,60 @@ encoder might decide to *refresh* by sending Indexed-Duplicate representations
 for popular header fields ({{absolute-index}}), ensuring they have small indices
 and hence minimal size on the wire.
 
-## Fixed overhead.
+## Additional state beyond HPACK.
 
-HPACK defines overhead as 32 bytes ({{!RFC7541}} Section 4.1).  QCRAM adds some
-per-entry state, to track acknowledgment status and eviction reference count.  A
-larger value than 32 might be more accurate for QCRAM.
+### Vulnerable Entries
 
-## Co-ordinated Packetization
+For header blocks encoded in non-blocking mode, the encoder needs to forego
+indexed representations that refer to vulnerable entries (see
+{{overview-hol-avoidance}}.  A implementation could extend the header table
+entry with a boolean to track vulnerability.  However, the number of entries in
+the table that are vulnerable is likely to be small in practice, much less than
+the total number of entries, so a data tracking only vulnerable
+(un-acknowledged) entries, separate from the main header table, might be more
+space efficient.
 
-When a dynamic table entry is both defined and referenced by header blocks
-within the same packet, there is no risk of HoL blocking and using an indexed
-representation is strictly better than using a literal.  An implementation could
-attempt to exploit this exception by employing co-ordination between QCRAM
-compression and QUIC transport packetization.  However, if the packet is lost,
-the transport might choose a different packetization when retransmitting the
-missing data.
+### Safe evictions
+
+Section {{evictions}} describes how QCRAM avoids invalid references that might
+result from out-of-order delivery.  When the encoder processes a HEADER_ACK, it
+dereferences table entries that were indexed in the acknowledged header.  To
+track which entries must be dereferenced, it can maintain a map from
+unacknowledged headers to lists of (absolute) indices.  The simplest place to
+store the actual reference count might be the table entries.  However, in
+practice the number of entries in the table with a non-zero reference count is
+likely to stay quite small, so a separate data structure tracking entries with
+non-zero reference counts, separate from the main header table, could be more
+space efficient.
+
+### Decoder Blocking
+
+To support blocking, the decoder needs to keep track of entries it has added to
+the dynamic table (see {{overview-hol-avoidance}}), and it needs to track
+blocked streams.
+
+Tracking added entries might be done in a brute force fashion without additional
+space.  However, this would have O(N) cost where N is the number of entries in
+the dynamic table.  Alternatively, a dedicated data structure might improve on
+brute force in exchange a small amount of additional space.  For example, a set
+of pairs (of indices), representing non-overlapping sub-ranges can be used.
+Each operation (add, or query) can be done within O(log M) complexity.  Here set
+size M is the number of sub-ranges. In practice M would be very small, as most
+table entries would be concentrated in the first sub-range [1, M].
+
+To track blocked streams, an ordered map (e.g. multi-map) from `Depends Index`
+values to streams can be used.  Whenever the decoder processes a header block, it
+can drain any members of the blocked streams map that have `Depends Index <= M`
+where `[1,M]` is the first member of the added- entries sub-ranges set.  Again,
+the complexity of operations would be at most O(log N), N being the number
+of concurrently blocked streams.
+
+### Fixed overhead.
+
+HPACK defines overhead as 32 bytes ({{!RFC7541}} Section 4.1).  As described
+above, QCRAM adds some per-connection state, and possibly some per-entry state
+to track acknowledgment status and eviction reference count.  A larger value
+than 32 might be more accurate for QCRAM.
 
 # Security Considerations
 

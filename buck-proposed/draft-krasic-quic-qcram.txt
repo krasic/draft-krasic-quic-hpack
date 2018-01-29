@@ -4,8 +4,8 @@
 
 QUIC                                                           C. Krasic
 Internet-Draft                                                    Google
-Intended status: Standards Track                        January 27, 2018
-Expires: July 31, 2018
+Intended status: Standards Track                        January 29, 2018
+Expires: August 2, 2018
 
 
                  Header Compression for HTTP over QUIC
@@ -40,7 +40,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on July 31, 2018.
+   This Internet-Draft will expire on August 2, 2018.
 
 Copyright Notice
 
@@ -53,7 +53,7 @@ Copyright Notice
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 1]
+Krasic                   Expires August 2, 2018                 [Page 1]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -109,7 +109,7 @@ Table of Contents
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 2]
+Krasic                   Expires August 2, 2018                 [Page 2]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -165,7 +165,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 3]
+Krasic                   Expires August 2, 2018                 [Page 3]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -191,8 +191,8 @@ Internet-Draft                    QCRAM                     January 2018
    of which entries have been added to its dynamic table.  The stream
    for a header with BLOCKING flag set is considered blocked by the
    decoder and can not be processed until all entries in the range "[1,
-   Depends Index]" have been added.  While blocked, HB's header field
-   data MUST remain in stream B's flow control window.
+   Depends Index]" have been added.  While blocked, header field data
+   MUST remain in the blocked stream's flow control window.
 
 2.  HTTP over QUIC mapping extensions
 
@@ -221,7 +221,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 4]
+Krasic                   Expires August 2, 2018                 [Page 4]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -250,15 +250,15 @@ Internet-Draft                    QCRAM                     January 2018
 3.1.  Allowed Instructions
 
    HEADERS frames on the Control Stream SHOULD contain only Literal with
-   Incremental Indexing representations.  Frames on this stream modify
-   the dynamic table state without generating output to any particular
-   request.
+   Incremental Indexing and Indexed with Duplication (see Section 3.5)
+   representations.  Frames on this stream modify the dynamic table
+   state without generating output to any particular request.
 
    HEADERS and PUSH_PROMISE frames on request and push streams MUST NOT
-   contain Literal with Incremental Indexing representations.  Frames on
-   these streams reference the dynamic table in a particular state
-   without modifying it, but emit the headers for an HTTP request or
-   response.
+   contain Literal with Incremental Indexing and Indexed with
+   Duplication representations.  Frames on these streams reference the
+   dynamic table in a particular state without modifying it, but emit
+   the headers for an HTTP request or response.
 
 3.2.  Header Block Prefix
 
@@ -277,7 +277,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 5]
+Krasic                   Expires August 2, 2018                 [Page 5]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -333,18 +333,18 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 6]
+Krasic                   Expires August 2, 2018                 [Page 6]
 
 Internet-Draft                    QCRAM                     January 2018
 
 
-   As header blocks on request and push streams do not contain
-   insertions, the "baseIndex" is the same for all representations they
-   contain.  However, indexed representations are sent on request and
-   push streams, so the value of "baseIndex" can not be synchronized
-   implicitly.  Instead then, QCRAM sends encoder's "Base Index"
-   explicitly as part of the prefix (see Section 3.2), so that the
-   decoder can compute the same absolute indices that the encoder used:
+   Header blocks on request and push streams do not modify the dynamic
+   table state, so they never change the "baseIndex".  However, since
+   ordering between streams is not guaranteed, the value of "baseIndex"
+   can not be synchronized implicitly.  Instead then, QCRAM sends
+   encoder's "Base Index" explicitly as part of the prefix (see
+   Section 3.2), so that the decoder can compute the same absolute
+   indices that the encoder used:
 
    "absoluteIndex = prefix.baseIndex + staticTable.size - relativeIndex;
    "
@@ -389,7 +389,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 7]
+Krasic                   Expires August 2, 2018                 [Page 7]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -430,11 +430,11 @@ Internet-Draft                    QCRAM                     January 2018
    For header blocks encoded in non-blocking mode, the encoder needs to
    forego indexed representations that refer to vulnerable entries (see
    Section 1.2.  A implementation could extend the header table entry
-   with a boolean to track vulnerability.  However, the numer of entries
-   in the table that are vulnerable is likely to be small in practice,
-   much less than the total number of entries, so a data tracking only
-   vulnerable (un-acknowledged) entries, separate from the main header
-   table, might be more space efficient.
+   with a boolean to track vulnerability.  However, the number of
+   entries in the table that are vulnerable is likely to be small in
+   practice, much less than the total number of entries, so a data
+   tracking only vulnerable (un-acknowledged) entries, separate from the
+   main header table, might be more space efficient.
 
 4.2.2.  Safe evictions
 
@@ -445,7 +445,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 8]
+Krasic                   Expires August 2, 2018                 [Page 8]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -477,7 +477,7 @@ Internet-Draft                    QCRAM                     January 2018
 
    To track blocked streams, an ordered map (e.g. multi-map) from
    "Depends Index" values to streams can be used.  Whenever the decoder
-   processs a header block, it can drain any members of the blockeds
+   processes a header block, it can drain any members of the blocked
    streams map that have "Depends Index <= M" where "[1,M]" is the first
    member of the added- entries sub-ranges set.  Again, the complexity
    of operations would be at most O(log N), N being the number of
@@ -501,7 +501,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                 [Page 9]
+Krasic                   Expires August 2, 2018                 [Page 9]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -535,8 +535,8 @@ Internet-Draft                    QCRAM                     January 2018
 
    [QUIC-HTTP]
               Bishop, M., "Hypertext Transfer Protocol (HTTP) over
-              QUIC", draft-ietf-quic-http-08 (work in progress),
-              December 2017.
+              QUIC", draft-ietf-quic-http-09 (work in progress), January
+              2018.
 
    [RFC7541]  Peon, R. and H. Ruellan, "HPACK: Header Compression for
               HTTP/2", RFC 7541, DOI 10.17487/RFC7541, May 2015,
@@ -546,8 +546,8 @@ Internet-Draft                    QCRAM                     January 2018
 
    [QUIC-TRANSPORT]
               Iyengar, J. and M. Thomson, "QUIC: A UDP-Based Multiplexed
-              and Secure Transport", draft-ietf-quic-transport-08 (work
-              in progress), December 2017.
+              and Secure Transport", draft-ietf-quic-transport-09 (work
+              in progress), January 2018.
 
    [RFC7540]  Belshe, M., Peon, R., and M. Thomson, Ed., "Hypertext
               Transfer Protocol Version 2 (HTTP/2)", RFC 7540,
@@ -557,7 +557,7 @@ Internet-Draft                    QCRAM                     January 2018
 
 
 
-Krasic                    Expires July 31, 2018                [Page 10]
+Krasic                   Expires August 2, 2018                [Page 10]
 
 Internet-Draft                    QCRAM                     January 2018
 
@@ -613,4 +613,4 @@ Author's Address
 
 
 
-Krasic                    Expires July 31, 2018                [Page 11]
+Krasic                   Expires August 2, 2018                [Page 11]
